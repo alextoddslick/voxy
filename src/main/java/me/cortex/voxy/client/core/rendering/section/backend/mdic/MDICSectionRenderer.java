@@ -180,7 +180,9 @@ public class MDICSectionRenderer extends AbstractSectionRenderer<MDICViewport, B
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, SharedIndexBuffer.INSTANCE.id());
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, viewport.drawCallBuffer.id);
-        glBindBuffer(GL_PARAMETER_BUFFER_ARB, viewport.drawCountCallBuffer.id);
+        if (Capabilities.INSTANCE.indirectParameters) {
+            glBindBuffer(GL_PARAMETER_BUFFER_ARB, viewport.drawCountCallBuffer.id);
+        }
     }
 
     private void renderTerrain(MDICViewport viewport, long indirectOffset, long drawCountOffset, int maxDrawCount) {
@@ -202,7 +204,12 @@ public class MDICSectionRenderer extends AbstractSectionRenderer<MDICViewport, B
         if (VoxyClient.getOcclusionDebugState()==3) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         }
-        glMultiDrawElementsIndirectCountARB(GL_TRIANGLES, GL_UNSIGNED_SHORT, indirectOffset, drawCountOffset, maxDrawCount, 0);
+        if (Capabilities.INSTANCE.indirectParameters) {
+            glMultiDrawElementsIndirectCountARB(GL_TRIANGLES, GL_UNSIGNED_SHORT, indirectOffset, drawCountOffset, maxDrawCount, 0);
+        } else {
+            //Command buffer tail is zeroed in buildDrawCalls; empty commands draw nothing
+            glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_SHORT, indirectOffset, maxDrawCount, 0);
+        }
         if (VoxyClient.getOcclusionDebugState()==3) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         }
@@ -243,7 +250,12 @@ public class MDICSectionRenderer extends AbstractSectionRenderer<MDICViewport, B
 
         glMemoryBarrier(GL_COMMAND_BARRIER_BIT|GL_SHADER_STORAGE_BARRIER_BIT);//Barrier everything is needed
         glProvokingVertex(GL_FIRST_VERTEX_CONVENTION);
-        glMultiDrawElementsIndirectCountARB(GL_TRIANGLES, GL_UNSIGNED_SHORT, TRANSLUCENT_OFFSET*5*4, 4*4, Math.min(this.geometryManager.getSectionCount(), TRANSLUCENT_DRAW_COUNT), 0);
+        int translucentMax = Math.min(this.geometryManager.getSectionCount(), TRANSLUCENT_DRAW_COUNT);
+        if (Capabilities.INSTANCE.indirectParameters) {
+            glMultiDrawElementsIndirectCountARB(GL_TRIANGLES, GL_UNSIGNED_SHORT, TRANSLUCENT_OFFSET*5*4, 4*4, translucentMax, 0);
+        } else {
+            glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_SHORT, TRANSLUCENT_OFFSET*5*4, translucentMax, 0);
+        }
 
         glEnable(GL_CULL_FACE);
         glBindVertexArray(0);
@@ -304,6 +316,11 @@ public class MDICSectionRenderer extends AbstractSectionRenderer<MDICViewport, B
         GPUTiming.INSTANCE.marker("CG");
 
         {//Generate the commands
+            if (!Capabilities.INSTANCE.indirectParameters) {
+                //No GPU-side draw count: draws read maxDrawCount commands, so stale
+                // entries past the generated count must be zero (a zeroed command draws nothing)
+                viewport.drawCallBuffer.zero();
+            }
             this.distanceCountBuffer.zeroRange(0, 1024*4);
             this.commandGenShader.bind();
             glBindBufferBase(GL_UNIFORM_BUFFER, 0, this.uniform.id);
