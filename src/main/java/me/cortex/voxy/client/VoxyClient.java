@@ -25,7 +25,10 @@ public abstract class VoxyClient {
             Logger.error("AMD broken depth sampler detected, voxy does not work correctly and has been disabled, this will hopefully be fixed in the future");
         }
 
-        boolean systemSupported = Capabilities.INSTANCE.compute && Capabilities.INSTANCE.indirectParameters && !Capabilities.INSTANCE.hasBrokenDepthSampler;
+        boolean systemSupported = Capabilities.INSTANCE.compute && !Capabilities.INSTANCE.hasBrokenDepthSampler;
+        if (systemSupported && !Capabilities.INSTANCE.indirectParameters) {
+            Logger.warn("GL_ARB_indirect_parameters not supported (expected on macOS/Zink), using multi-draw-indirect fallback");
+        }
         if (!systemSupported) {
              Logger.error("Voxy is unsupported on your system.");
         }

@@ -54,7 +54,9 @@ public class Capabilities {
         var cap = GL.getCapabilities();
         this.sparseBuffer = cap.GL_ARB_sparse_buffer;
         this.compute = cap.glDispatchComputeIndirect != 0;
-        this.indirectParameters = cap.glMultiDrawElementsIndirectCountARB != 0;
+        //-Dvoxy.forceNoIndirectCount=true exercises the macOS/Zink fallback path on any platform
+        this.indirectParameters = cap.glMultiDrawElementsIndirectCountARB != 0
+                && !Boolean.getBoolean("voxy.forceNoIndirectCount");
         this.repFragTest = cap.GL_NV_representative_fragment_test;
         this.meshShaders = cap.GL_NV_mesh_shader;
         this.canQueryGpuMemory = cap.GL_NVX_gpu_memory_info;
