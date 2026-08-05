@@ -96,6 +96,38 @@ if (project.name.startsWith("1.20.1")) {
 
 loom {
     accessWidenerPath = sc.process(rootProject.file("src/main/resources/voxy.accesswidener"), "build/processed.accesswidener")
+
+    // macOS Zink/KosmicKrisp dev-client support (Task 5): `-D` system properties passed on
+    // the `./gradlew` command line are NOT forwarded to the forked run-client JVM by this
+    // Loom version, and the run task's Exec environment does not inherit DYLD_* variables
+    // exported in the invoking shell either (verified: without this block the client picks
+    // up Apple's native "OpenGL 4.1 Metal" renderer, not Mesa/Zink). So when invoked with
+    // -PzinkRun (see scripts/macos/run-zink-client.sh), inject the library-path -D args and
+    // DYLD_*/MESA_*/VK_* env vars directly into the "client" run config via the Loom DSL.
+    if (project.hasProperty("zinkRun")) {
+        val home = System.getProperty("user.home")
+        val mesa = "$home/mesa-native"
+        val glfwLib = "$home/src/glfw/build/src/libglfw.3.dylib"
+        val interposeLib = file("$mesa/lib/libgl_interpose.dylib")
+
+        runs {
+            named("client") {
+                environmentVariable("DYLD_LIBRARY_PATH", "$mesa/lib")
+                environmentVariable("LIBGL_DRIVERS_PATH", "$mesa/lib/dri")
+                environmentVariable("VK_DRIVER_FILES", "$mesa/share/vulkan/icd.d/kosmickrisp_mesa_icd.aarch64.json")
+                environmentVariable("EGL_PLATFORM", "surfaceless")
+                environmentVariable("MESA_LOADER_DRIVER_OVERRIDE", "zink")
+                environmentVariable("MESA_GL_VERSION_OVERRIDE", "4.6")
+                environmentVariable("MESA_GLSL_VERSION_OVERRIDE", "460")
+                if (interposeLib.exists()) {
+                    environmentVariable("DYLD_INSERT_LIBRARIES", interposeLib.absolutePath)
+                }
+                vmArg("-Dorg.lwjgl.egl.libname=$mesa/lib/libEGL.dylib")
+                vmArg("-Dorg.lwjgl.opengl.libname=$mesa/lib/libGL.dylib")
+                vmArg("-Dorg.lwjgl.glfw.libname=$glfwLib")
+            }
+        }
+    }
 }
 
 dependencies {
