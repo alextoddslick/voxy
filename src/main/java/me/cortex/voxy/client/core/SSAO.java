@@ -6,6 +6,7 @@ import me.cortex.voxy.client.core.gl.shader.Shader;
 import me.cortex.voxy.client.core.gl.shader.ShaderType;
 import me.cortex.voxy.client.core.rendering.Viewport;
 import me.cortex.voxy.client.core.util.JomlAddressWriter;
+import me.cortex.voxy.common.Logger;
 import org.joml.Matrix4f;
 import org.joml.Random;
 import org.lwjgl.system.MemoryStack;
@@ -55,7 +56,13 @@ public class SSAO {
             // reports a large "dedicated memory" figure due to Apple Silicon's unified memory
             // model, which would otherwise select BEST here) - BASIC is forced here regardless of
             // what that number says, specifically because of this query bug, not because of it.
-            if (Capabilities.INSTANCE.isZink) {
+            //
+            // Task 8 review round 2: gated on isKosmicKrisp specifically, NOT the broader isZink -
+            // this hang was only ever confirmed on Zink's KosmicKrisp (Apple/macOS) backend, and
+            // gating on isZink alone would silently downgrade SSAO for legitimate desktop Linux
+            // Zink-on-RADV/ANV/NVK users who don't have this bug.
+            if (Capabilities.INSTANCE.isKosmicKrisp) {
+                Logger.info("SSAO forced to BASIC: known driver hang on Zink/KosmicKrisp");
                 return createSSAO(properties, SSAOMode.BASIC);
             }
             if (Capabilities.INSTANCE.canQueryGpuMemory) {

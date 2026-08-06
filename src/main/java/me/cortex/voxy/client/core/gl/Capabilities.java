@@ -38,6 +38,7 @@ public class Capabilities {
     public final int ssboBindingAlignment;
     public final boolean isMesa;
     public final boolean isZink;
+    public final boolean isKosmicKrisp;
     public final boolean canQueryGpuMemory;
     public final long totalDedicatedMemory;//Bytes, dedicated memory
     public final long totalDynamicMemory;//Bytes, total allocation memory - dedicated memory
@@ -90,11 +91,18 @@ public class Capabilities {
 
         this.isMesa = glGetString(GL_VERSION).toLowerCase(Locale.ROOT).contains("mesa");
         // Task 8: specifically Zink (Mesa's GL-on-Vulkan translation layer), not Mesa's native GL
-        // drivers (RadeonSI/Iris/ANV etc) - some Zink-specific DSA/named-object entry points
-        // (buffer clears, framebuffer-attachment queries) have been found to hang under Zink on
-        // this machine's KosmicKrisp backend, so callers that need to work around Zink
-        // specifically (rather than Mesa broadly) should check this instead of isMesa.
+        // drivers (RadeonSI/Iris/ANV etc). Kept general-purpose for any caller that legitimately
+        // needs "is this Zink" - do NOT use this alone to gate the KosmicKrisp-specific driver-bug
+        // workaround below (see isKosmicKrisp), since Zink also runs fine on desktop Linux over
+        // RADV/ANV/NVK where the relevant hangs have never been observed.
         this.isZink = glGetString(GL_RENDERER).toLowerCase(Locale.ROOT).contains("zink");
+        // Task 8 (review round 2 finding): the framebuffer-attachment-query hang worked around in
+        // SSAO.java was only ever confirmed on Zink's KosmicKrisp (Apple/macOS) Vulkan backend -
+        // gating on isZink alone would silently downgrade SSAO for legitimate desktop Linux
+        // Zink-on-RADV/ANV/NVK users who don't have this bug. KosmicKrisp is uniquely named in the
+        // renderer string (e.g. "zink Vulkan 1.3(Apple M2 Max (MESA_KOSMICKRISP))"), so check for
+        // that specifically instead.
+        this.isKosmicKrisp = glGetString(GL_RENDERER).toLowerCase(Locale.ROOT).contains("kosmickrisp");
         var vendor = glGetString(GL_VENDOR).toLowerCase(Locale.ROOT);
         this.isIntel = vendor.contains("intel");
         this.isNvidia = vendor.contains("nvidia");
