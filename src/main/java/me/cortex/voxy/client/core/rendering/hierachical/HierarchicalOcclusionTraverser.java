@@ -253,12 +253,22 @@ public class HierarchicalOcclusionTraverser {
 
         PrintfDebugUtil.bind();
 
+        // Task 8: native buffer-clear calls (glClearNamedBufferData/glClearNamedBufferSubData,
+        // i.e. GlBuffer.zero()/zeroRange() and the raw nglClearNamedBufferSubData below) hang the
+        // Zink/KosmicKrisp driver after a short time (seconds) of being called every frame -
+        // reproduced consistently, confirmed via jstack (render thread stuck forever inside the
+        // native call, CPU time frozen, no crash/error). See MDICSectionRenderer.buildDrawCalls
+        // for the fuller explanation and task-8-report.md for the investigation. Route both
+        // per-frame clears here through UploadStream's upload()+commit() (a CPU-side write into a
+        // persistently-mapped staging buffer, flushed via glCopyNamedBufferSubData) instead, since
+        // that path is already exercised every frame elsewhere without hanging.
         if (RenderStatistics.enabled) {
-            this.statisticsBuffer.zero();
+            MemoryUtil.memSet(UploadStream.INSTANCE.upload(this.statisticsBuffer, 0, this.statisticsBuffer.size()), 0, this.statisticsBuffer.size());
         }
 
         //Clear the render output counter
-        nglClearNamedBufferSubData(viewport.getRenderList().id, GL_R32UI, 0, 4, GL_RED_INTEGER, GL_UNSIGNED_INT, 0);
+        MemoryUtil.memPutInt(UploadStream.INSTANCE.upload(viewport.getRenderList(), 0, 4), 0);
+        UploadStream.INSTANCE.commit();
 
         //Traverse
         this.traverseInternal();

@@ -324,12 +324,28 @@ public class MDICSectionRenderer extends AbstractSectionRenderer<MDICViewport, B
         GPUTiming.INSTANCE.marker("CG");
 
         {//Generate the commands
+            // Task 8: the native buffer-clear entry points (glClearNamedBufferData /
+            // glClearNamedBufferSubData, i.e. GlBuffer.zero()/zeroRange()) hang the
+            // Zink/KosmicKrisp driver after a short time (seconds) of being called every frame -
+            // reproduced consistently and confirmed via jstack: the render thread gets stuck
+            // forever inside nglClearNamedBufferSubData (CPU time stops accumulating entirely,
+            // no crash, no error - just a silent freeze). This reproduces even with the tiny
+            // (4KB) distanceCountBuffer clear alone, with GL_ARB_indirect_parameters present and
+            // this whole block's drawCallBuffer.zero() never running - so it isn't a
+            // large-clear-specific or fallback-path-specific bug, it's these native clear calls
+            // themselves under this driver. UploadStream's upload()+commit() (a CPU-side write
+            // into a persistently-mapped staging buffer, flushed via glCopyNamedBufferSubData)
+            // is already used every frame elsewhere in this exact method (uploadUniformBuffer,
+            // called just above) without any hang, so route both per-frame zeroings through it
+            // instead of the native clear calls.
             if (!Capabilities.INSTANCE.indirectParameters) {
                 //No GPU-side draw count: draws read maxDrawCount commands, so stale
                 // entries past the generated count must be zero (a zeroed command draws nothing)
-                viewport.drawCallBuffer.zero();
+                long size = viewport.drawCallBuffer.size();
+                MemoryUtil.memSet(UploadStream.INSTANCE.upload(viewport.drawCallBuffer, 0, size), 0, size);
             }
-            this.distanceCountBuffer.zeroRange(0, 1024*4);
+            MemoryUtil.memSet(UploadStream.INSTANCE.upload(this.distanceCountBuffer, 0, 1024*4), 0, 1024*4);
+            UploadStream.INSTANCE.commit();
             this.commandGenShader.bind();
             glBindBufferBase(GL_UNIFORM_BUFFER, 0, this.uniform.id);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, viewport.drawCallBuffer.id);
@@ -341,7 +357,10 @@ public class MDICSectionRenderer extends AbstractSectionRenderer<MDICViewport, B
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, this.distanceCountBuffer.id);
 
             if (RenderStatistics.enabled) {
-                this.statisticsBuffer.zero();
+                //Task 8: see the note above re: native buffer-clear calls hanging Zink/KosmicKrisp -
+                // same fix (UploadStream instead of GlBuffer.zero()) applies here.
+                MemoryUtil.memSet(UploadStream.INSTANCE.upload(this.statisticsBuffer, 0, this.statisticsBuffer.size()), 0, this.statisticsBuffer.size());
+                UploadStream.INSTANCE.commit();
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, STATISTICS_BUFFER_BINDING, this.statisticsBuffer.id);
             }
 
