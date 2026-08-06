@@ -119,6 +119,12 @@ loom {
                 environmentVariable("MESA_LOADER_DRIVER_OVERRIDE", "zink")
                 environmentVariable("MESA_GL_VERSION_OVERRIDE", "4.6")
                 environmentVariable("MESA_GLSL_VERSION_OVERRIDE", "460")
+                // Task 8 debugging lever (brief-sanctioned): driver-side debug output.
+                // NOTE: ZINK_DEBUG=validation was also tried and causes a hard native SIGSEGV
+                // here ("MESA: error: Failed to load validation layer") - this Mesa build has no
+                // VK_LAYER_KHRONOS_validation installed, so requesting the validation debug
+                // channel crashes the loader itself rather than degrading gracefully. Left out.
+                environmentVariable("MESA_DEBUG", "1")
                 if (interposeLib.exists()) {
                     environmentVariable("DYLD_INSERT_LIBRARIES", interposeLib.absolutePath)
                 }
@@ -136,6 +142,36 @@ loom {
                 // defense-in-depth: it forces JOML's NIO-based fallback for any remaining/future
                 // caller (mods, Iris shaderpacks) instead of silently corrupting or hard-crashing.
                 vmArg("-Djoml.nounsafe=true")
+
+                // Task 8: headless world auto-load for the dev client, since the client is
+                // launched with no visible window to click "Singleplayer" -> world in. Gradle's
+                // runClient task interprets `./gradlew ... --quickPlaySingleplayer foo` as an
+                // (unknown) command-line option to the *task itself*, not a program arg forwarded
+                // to the client JVM (same class of forwarding gap as Task 5's -D/env findings) -
+                // so it must go through the Loom DSL's programArg(), gated on a Gradle property.
+                // Usage: ./gradlew :1.21.1-fabric:runClient -PzinkRun -PquickPlayWorld="New World"
+                if (project.hasProperty("quickPlayWorld")) {
+                    programArg("--quickPlaySingleplayer")
+                    programArg(project.property("quickPlayWorld") as String)
+                }
+                // Task 7/8: exercises Voxy's zero-tail MDI fallback path (for platforms without
+                // GL_ARB_indirect_parameters) on any driver, to verify it independently of
+                // whichever path the current GPU would normally take.
+                // Usage: add -PvoxyForceNoIndirectCount to the runClient invocation.
+                if (project.hasProperty("voxyForceNoIndirectCount")) {
+                    vmArg("-Dvoxy.forceNoIndirectCount=true")
+                }
+                // Task 8: KosmicKrisp/Zink cannot service Voxy's default ~4GB single geometry
+                // buffer allocation in one glNamedBufferStorage call (fails with
+                // GL_OUT_OF_MEMORY - see RenderResourceReuse.getGeometryBufferSize()'s log line
+                // and task-8-report.md for the investigation). No sparse-buffer fallback is
+                // available here (ARB_sparse_buffer absent per Task 4's extension dump), so this
+                // is a documented operational workaround rather than a code fix: pick a smaller
+                // geometry buffer size that KosmicKrisp can actually allocate in one call.
+                // Usage: ./gradlew :1.21.1-fabric:runClient -PzinkRun -PgeomBufMB=512
+                if (project.hasProperty("geomBufMB")) {
+                    vmArg("-Dvoxy.geometryBufferSizeOverrideMB=" + project.property("geomBufMB"))
+                }
             }
         }
     }

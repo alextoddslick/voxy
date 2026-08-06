@@ -127,6 +127,10 @@ public class RenderResourceReuse {
         if (!override.isEmpty()) {
             geometryCapacity = Long.parseLong(override)*1024L*1024L;
         }
+        Logger.info("Computed geometry buffer size: " + geometryCapacity
+                + " (" + (geometryCapacity/(1024*1024)) + "MB)"
+                + " canQueryGpuMemory=" + Capabilities.INSTANCE.canQueryGpuMemory
+                + (Capabilities.INSTANCE.canQueryGpuMemory ? ", driver free dedicated memory=" + (Capabilities.INSTANCE.getFreeDedicatedGpuMemory()/(1024*1024)) + "MB" : ""));
         return geometryCapacity;
     }
 }
