@@ -216,6 +216,16 @@ dependencies {
     runtimeOnly("org.lwjgl:lwjgl-zstd:$lwjglVersion:natives-windows")
     runtimeOnly("org.lwjgl:lwjgl-lmdb:$lwjglVersion:natives-linux")
     runtimeOnly("org.lwjgl:lwjgl-zstd:$lwjglVersion:natives-linux")
+    // macOS (Task 8): these two LWJGL modules are extras Voxy adds on top of what Minecraft's
+    // own vanilla LWJGL set already provides (which Mojang already ships natives-macos for) -
+    // lwjgl-lmdb/lwjgl-zstd only had windows/linux natives declared here, so on macOS
+    // liblwjgl_zstd.dylib/liblwjgl_lmdb.dylib were never on the classpath, and Voxy's
+    // background storage-compression workers (ZSTDCompressor) threw UnsatisfiedLinkError
+    // the first time they ran (LMDB storage would hit the same gap once exercised).
+    runtimeOnly("org.lwjgl:lwjgl-lmdb:$lwjglVersion:natives-macos")
+    runtimeOnly("org.lwjgl:lwjgl-zstd:$lwjglVersion:natives-macos")
+    runtimeOnly("org.lwjgl:lwjgl-lmdb:$lwjglVersion:natives-macos-arm64")
+    runtimeOnly("org.lwjgl:lwjgl-zstd:$lwjglVersion:natives-macos-arm64")
 
     implementation(include("redis.clients:jedis:$jedisVersion")!!)
     implementation(include("org.rocksdb:rocksdbjni:$rocksdbVersion")!!)
@@ -229,6 +239,10 @@ dependencies {
     implementation(include("org.lwjgl:lwjgl-zstd:$lwjglVersion:natives-windows")!!)
     implementation(include("org.lwjgl:lwjgl-lmdb:$lwjglVersion:natives-linux")!!)
     implementation(include("org.lwjgl:lwjgl-zstd:$lwjglVersion:natives-linux")!!)
+    implementation(include("org.lwjgl:lwjgl-lmdb:$lwjglVersion:natives-macos")!!)
+    implementation(include("org.lwjgl:lwjgl-zstd:$lwjglVersion:natives-macos")!!)
+    implementation(include("org.lwjgl:lwjgl-lmdb:$lwjglVersion:natives-macos-arm64")!!)
+    implementation(include("org.lwjgl:lwjgl-zstd:$lwjglVersion:natives-macos-arm64")!!)
     minecraftRuntimeLibraries("org.xerial:sqlite-jdbc:$sqliteJdbcVersion")
 }
 
