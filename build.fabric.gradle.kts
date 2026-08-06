@@ -110,11 +110,23 @@ loom {
         val glfwLib = "$home/src/glfw/build/src/libglfw.3.dylib"
         val interposeLib = file("$mesa/lib/libgl_interpose.dylib")
 
+        // Task 8 review round 2 experiment: which Vulkan ICD Zink runs on top of, to test whether
+        // the unresolved glFenceSync hang (see task-8-report.md) is specific to KosmicKrisp or a
+        // broader Zink-on-macOS issue. Defaults to kosmickrisp (the existing, only-ever-used
+        // path) so nothing changes unless -PvkDriver=moltenvk is passed explicitly.
+        // Usage: ./gradlew :1.21.1-fabric:runClient -PzinkRun -PvkDriver=moltenvk
+        val vkDriver = (project.findProperty("vkDriver") as String?) ?: "kosmickrisp"
+        val vkDriverFiles = when (vkDriver) {
+            "kosmickrisp" -> "$mesa/share/vulkan/icd.d/kosmickrisp_mesa_icd.aarch64.json"
+            "moltenvk" -> "/opt/homebrew/etc/vulkan/icd.d/MoltenVK_icd.json"
+            else -> throw GradleException("Unknown -PvkDriver value '$vkDriver', expected kosmickrisp or moltenvk")
+        }
+
         runs {
             named("client") {
                 environmentVariable("DYLD_LIBRARY_PATH", "$mesa/lib")
                 environmentVariable("LIBGL_DRIVERS_PATH", "$mesa/lib/dri")
-                environmentVariable("VK_DRIVER_FILES", "$mesa/share/vulkan/icd.d/kosmickrisp_mesa_icd.aarch64.json")
+                environmentVariable("VK_DRIVER_FILES", vkDriverFiles)
                 environmentVariable("EGL_PLATFORM", "surfaceless")
                 environmentVariable("MESA_LOADER_DRIVER_OVERRIDE", "zink")
                 environmentVariable("MESA_GL_VERSION_OVERRIDE", "4.6")
