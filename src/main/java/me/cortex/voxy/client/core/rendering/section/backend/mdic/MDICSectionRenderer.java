@@ -232,13 +232,27 @@ public class MDICSectionRenderer extends AbstractSectionRenderer<MDICViewport, B
         //RenderLayer.getCutoutMipped().endDrawing();
     }
 
+    //Shared with the I-2 fallback zeroing in buildDrawCalls() so the zeroed extent and the draw's
+    // maxDrawCount can never disagree.
+    private int maxOpaqueDrawCount() {
+        return Math.min((int)(this.geometryManager.getSectionCount()*4.4+128), OPAQUE_DRAW_COUNT);
+    }
+
+    private int maxTranslucentDrawCount() {
+        return Math.min(this.geometryManager.getSectionCount(), TRANSLUCENT_DRAW_COUNT);
+    }
+
+    private int maxTemporalDrawCount() {
+        return Math.min(this.geometryManager.getSectionCount(), TEMPORAL_DRAW_COUNT);
+    }
+
     @Override
     public void renderOpaque(MDICViewport viewport) {
         if (this.geometryManager.getSectionCount() == 0) return;
 
         this.uploadUniformBuffer(viewport);
 
-        this.renderTerrain(viewport, 0, 4*3, Math.min((int)(this.geometryManager.getSectionCount()*4.4+128), OPAQUE_DRAW_COUNT));
+        this.renderTerrain(viewport, 0, 4*3, this.maxOpaqueDrawCount());
     }
 
     @Override
@@ -258,7 +272,7 @@ public class MDICSectionRenderer extends AbstractSectionRenderer<MDICViewport, B
 
         glMemoryBarrier(GL_COMMAND_BARRIER_BIT|GL_SHADER_STORAGE_BARRIER_BIT);//Barrier everything is needed
         glProvokingVertex(GL_FIRST_VERTEX_CONVENTION);
-        int translucentMax = Math.min(this.geometryManager.getSectionCount(), TRANSLUCENT_DRAW_COUNT);
+        int translucentMax = this.maxTranslucentDrawCount();
         if (Capabilities.INSTANCE.indirectParameters) {
             glMultiDrawElementsIndirectCountARB(GL_TRIANGLES, GL_UNSIGNED_SHORT, TRANSLUCENT_OFFSET*5*4, 4*4, translucentMax, 0);
         } else {
@@ -331,20 +345,29 @@ public class MDICSectionRenderer extends AbstractSectionRenderer<MDICViewport, B
             // forever inside nglClearNamedBufferSubData (CPU time stops accumulating entirely,
             // no crash, no error - just a silent freeze). This reproduces even with the tiny
             // (4KB) distanceCountBuffer clear alone, with GL_ARB_indirect_parameters present and
-            // this whole block's drawCallBuffer.zero() never running - so it isn't a
+            // this whole block's drawCallBuffer zeroing never running - so it isn't a
             // large-clear-specific or fallback-path-specific bug, it's these native clear calls
-            // themselves under this driver. UploadStream's upload()+commit() (a CPU-side write
-            // into a persistently-mapped staging buffer, flushed via glCopyNamedBufferSubData)
-            // is already used every frame elsewhere in this exact method (uploadUniformBuffer,
-            // called just above) without any hang, so route both per-frame zeroings through it
-            // instead of the native clear calls.
+            // themselves under this driver. GlBuffer.zeroRangeSafe() gates the fix to KosmicKrisp
+            // only (routing through UploadStream's upload()+commit() there - a CPU-side write into
+            // a persistently-mapped staging buffer, flushed via glCopyNamedBufferSubData - already
+            // used every frame elsewhere in this exact method, in uploadUniformBuffer, called just
+            // above, without any hang); every other platform keeps using the native clear
+            // unchanged, matching Windows/Linux's unaltered behavior.
             if (!Capabilities.INSTANCE.indirectParameters) {
-                //No GPU-side draw count: draws read maxDrawCount commands, so stale
-                // entries past the generated count must be zero (a zeroed command draws nothing)
-                long size = viewport.drawCallBuffer.size();
-                MemoryUtil.memSet(UploadStream.INSTANCE.upload(viewport.drawCallBuffer, 0, size), 0, size);
+                // No GPU-side draw count: each fallback glMultiDrawElementsIndirect(..., maxDrawCount, 0)
+                // below (renderOpaque/renderTranslucent/renderTemporal) unconditionally reads
+                // maxDrawCount command slots, so every slot it can read must be zeroed this frame
+                // (a zeroed command draws nothing) - stale data from a prior frame in an unwritten
+                // slot would otherwise be redrawn. CRITICAL INVARIANT: the zeroed extent for each
+                // region must be computed from the SAME (or a larger) count than the corresponding
+                // draw uses - hence reusing the exact maxOpaque/maxTranslucent/maxTemporal helpers
+                // that renderOpaque/renderTranslucent/renderTemporal themselves call, rather than
+                // zeroing the whole ~12MB drawCallBuffer every frame.
+                viewport.drawCallBuffer.zeroRangeSafe(0, this.maxOpaqueDrawCount()*20L);
+                viewport.drawCallBuffer.zeroRangeSafe(TRANSLUCENT_OFFSET*5L*4, this.maxTranslucentDrawCount()*20L);
+                viewport.drawCallBuffer.zeroRangeSafe(TEMPORAL_OFFSET*5L*4, this.maxTemporalDrawCount()*20L);
             }
-            MemoryUtil.memSet(UploadStream.INSTANCE.upload(this.distanceCountBuffer, 0, 1024*4), 0, 1024*4);
+            this.distanceCountBuffer.zeroRangeSafe(0, 1024*4);
             UploadStream.INSTANCE.commit();
             this.commandGenShader.bind();
             glBindBufferBase(GL_UNIFORM_BUFFER, 0, this.uniform.id);
@@ -358,8 +381,8 @@ public class MDICSectionRenderer extends AbstractSectionRenderer<MDICViewport, B
 
             if (RenderStatistics.enabled) {
                 //Task 8: see the note above re: native buffer-clear calls hanging Zink/KosmicKrisp -
-                // same fix (UploadStream instead of GlBuffer.zero()) applies here.
-                MemoryUtil.memSet(UploadStream.INSTANCE.upload(this.statisticsBuffer, 0, this.statisticsBuffer.size()), 0, this.statisticsBuffer.size());
+                // same gated fix (GlBuffer.zeroRangeSafe()) applies here.
+                this.statisticsBuffer.zeroRangeSafe(0, this.statisticsBuffer.size());
                 UploadStream.INSTANCE.commit();
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, STATISTICS_BUFFER_BINDING, this.statisticsBuffer.id);
             }
@@ -411,7 +434,7 @@ public class MDICSectionRenderer extends AbstractSectionRenderer<MDICViewport, B
     public void renderTemporal(MDICViewport viewport) {
         if (this.geometryManager.getSectionCount() == 0) return;
         //Render temporal
-        this.renderTerrain(viewport, TEMPORAL_OFFSET*5*4, 4*5, Math.min(this.geometryManager.getSectionCount(), TEMPORAL_DRAW_COUNT));
+        this.renderTerrain(viewport, TEMPORAL_OFFSET*5*4, 4*5, this.maxTemporalDrawCount());
     }
 
     @Override
