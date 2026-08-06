@@ -12,9 +12,15 @@
 #import <voxy:lod/block_model.glsl>
 #import <voxy:lod/gl46/bindings.glsl>
 
-//"flat" declared only on raw.frag's matching input - see quads3.vert for why
-// (Mesa/Zink KosmicKrisp compiler bug: spurious xfb_buffer error when
-// GL_MAX_TRANSFORM_FEEDBACK_BUFFERS=0 and a vertex "out" has an interpolation qualifier).
+// DO NOT add any interpolation qualifier (flat/smooth/noperspective/centroid) to a vertex
+// "out" in this file - it breaks Mesa/Zink (KosmicKrisp on macOS) when
+// GL_MAX_TRANSFORM_FEEDBACK_BUFFERS=0 (spurious "invalid xfb_buffer" compile error; see
+// quads3.vert's comment for the full explanation). This file (test/raw.vert) is currently dead
+// code - unreferenced by any Shader.make()/ShaderLoader call site in the codebase - so unlike
+// quads3.vert/raster.vert/node_outline.vert it has no Java build site to wire a VS_FLAT-style
+// per-driver #define into; "flat" is simply omitted here (declared only on raw.frag's matching
+// input, which is legal GLSL and sufficient on every driver) rather than adding dead plumbing
+// for an unused shader.
 layout(location = 6) out uint quadDebug;
 
 uint extractLodLevel() {

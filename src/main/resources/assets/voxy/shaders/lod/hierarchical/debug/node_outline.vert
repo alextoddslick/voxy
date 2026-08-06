@@ -17,10 +17,11 @@ layout(binding = 2, std430) restrict buffer NodeList {
     uint nodeQueue[];
 };
 
-//"flat" declared only on frag.frag's matching input - see quads3.vert for why
-// (Mesa/Zink KosmicKrisp compiler bug: spurious xfb_buffer error when
-// GL_MAX_TRANSFORM_FEEDBACK_BUFFERS=0 and a vertex "out" has an interpolation qualifier).
-layout(location = 1) out vec4 colour;
+//VS_FLAT is #define'd by the Java Shader.Builder call site (DebugRenderer) to "flat" on every
+// driver except Mesa, and to nothing on Mesa - see quads3.vert for why (Mesa/Zink KosmicKrisp
+// compiler bug: spurious xfb_buffer error when GL_MAX_TRANSFORM_FEEDBACK_BUFFERS=0 and a vertex
+// "out" has an interpolation qualifier).
+layout(location = 1) out VS_FLAT vec4 colour;
 
 void main() {
     UnpackedNode node;

@@ -1,5 +1,6 @@
 package me.cortex.voxy.client.core.rendering.hierachical;
 
+import me.cortex.voxy.client.core.gl.Capabilities;
 import me.cortex.voxy.client.core.gl.GlBuffer;
 import me.cortex.voxy.client.core.gl.GlVertexArray;
 import me.cortex.voxy.client.core.gl.shader.Shader;
@@ -27,6 +28,10 @@ import static org.lwjgl.opengl.GL43.*;
 
 public class DebugRenderer {
     private final Shader debugShader = Shader.make()
+            // Task 8: Mesa/Zink (KosmicKrisp) fails to compile a vertex "out" declared with any
+            // interpolation qualifier when GL_MAX_TRANSFORM_FEEDBACK_BUFFERS=0 - see
+            // quads3.vert's comment. VS_FLAT restores "flat" on every other driver.
+            .define("VS_FLAT", Capabilities.INSTANCE.isMesa ? "" : "flat")
             .add(ShaderType.VERTEX, "voxy:lod/hierarchical/debug/node_outline.vert")
             .add(ShaderType.FRAGMENT, "voxy:lod/hierarchical/debug/frag.frag")
             .compile();

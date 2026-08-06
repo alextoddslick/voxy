@@ -116,6 +116,11 @@ public class MDICSectionRenderer extends AbstractSectionRenderer<MDICViewport, B
 
                 //.defineIf("USE_NV_BARRY", Capabilities.INSTANCE.nvBarryCoords)
 
+                // Task 8: Mesa/Zink (KosmicKrisp) fails to compile a vertex "out" declared
+                // with any interpolation qualifier when GL_MAX_TRANSFORM_FEEDBACK_BUFFERS=0
+                // (see quads3.vert's comment). VS_FLAT restores "flat" on every other driver.
+                .define("VS_FLAT", Capabilities.INSTANCE.isMesa ? "" : "flat")
+
                 .addSource(ShaderType.VERTEX, vertex);
 
         //Apply per face tinting
@@ -137,6 +142,7 @@ public class MDICSectionRenderer extends AbstractSectionRenderer<MDICViewport, B
         if (this.pipeline.hasTAA()) {
             this.cullShader = Shader.make()
                     .apply(this.properties::apply)
+                    .define("VS_FLAT", Capabilities.INSTANCE.isMesa ? "" : "flat")
                     .addSource(ShaderType.VERTEX, ShaderLoader.parse("voxy:lod/gl46/cull/raster.vert")+"\n\n\n\n"+pipeline.taaFunction("getTAA"))
                     .define("TAA")
                     .add(ShaderType.FRAGMENT, "voxy:lod/gl46/cull/raster.frag")
@@ -144,6 +150,7 @@ public class MDICSectionRenderer extends AbstractSectionRenderer<MDICViewport, B
         } else {
             this.cullShader = Shader.make()
                     .apply(this.properties::apply)
+                    .define("VS_FLAT", Capabilities.INSTANCE.isMesa ? "" : "flat")
                     .add(ShaderType.VERTEX, "voxy:lod/gl46/cull/raster.vert")
                     .add(ShaderType.FRAGMENT, "voxy:lod/gl46/cull/raster.frag")
                     .compile();

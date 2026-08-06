@@ -10,11 +10,12 @@
 #import <voxy:lod/gl46/bindings.glsl>
 #import <voxy:util/depthutils.glsl>
 
-//"flat" declared only on raster.frag's matching inputs - see quads3.vert for why
+//VS_FLAT is #define'd by the Java Shader.Builder call site (MDICSectionRenderer's cullShader)
+// to "flat" on every driver except Mesa, and to nothing on Mesa - see quads3.vert for why
 // (Mesa/Zink KosmicKrisp compiler bug: spurious xfb_buffer error when
 // GL_MAX_TRANSFORM_FEEDBACK_BUFFERS=0 and a vertex "out" has an interpolation qualifier).
-out uint id;
-out uint value;
+VS_FLAT out uint id;
+VS_FLAT out uint value;
 
 
 #ifdef TAA
