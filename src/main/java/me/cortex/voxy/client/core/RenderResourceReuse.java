@@ -62,31 +62,54 @@ public class RenderResourceReuse {
                 driverMemory = Capabilities.INSTANCE.getFreeDedicatedGpuMemory();
             }
 
-            glGetError();//Clear any errors
-            if (!(Capabilities.INSTANCE.isNvidia&& ThreadUtils.isWindows&&Capabilities.INSTANCE.sparseBuffer)) {//This hack makes it so it doesnt crash on renderdoc
-                buffer = new GlBuffer(capacity, false);//Only do this if we are not on nvidia
-                //TODO: FIXME: TEST, see if the issue is that we are trying to zero the entire buffer, try only zeroing increments
-                // or dont zero it at all
-            } else {
-                Logger.info("Running on nvidia, using workaround sparse buffer allocation");
-            }
-            int error = glGetError();
-            if (error != GL_NO_ERROR || buffer == null) {
-                if ((buffer == null || error == GL_OUT_OF_MEMORY) && Capabilities.INSTANCE.sparseBuffer) {
-                    if (buffer != null) {
-                        Logger.error("Failed to allocate geometry buffer, attempting workaround with sparse buffers");
-                        buffer.free();
-                    }
-                    buffer = new GlBuffer(capacity, GL_SPARSE_STORAGE_BIT_ARB);
-                    //buffer.zero();
-                    error = glGetError();
-                    if (error != GL_NO_ERROR) {
-                        buffer.free();
-                        throw new IllegalStateException("Unable to allocate geometry buffer using workaround, got gl error " + error);
-                    }
+            // Task 8 finding I1: a single large glNamedBufferStorage allocation can genuinely
+            // fail with GL_OUT_OF_MEMORY on drivers/platforms where the sizing heuristic above
+            // overshoots what can actually be allocated in one call (observed on Zink/KosmicKrisp
+            // on macOS: the default ~4GB request fails outright, but the exact same call
+            // succeeds at 512MB - see task-8-report.md). When no sparse-buffer fallback is
+            // available either, retry at half the requested size, down to a 512MB floor, before
+            // giving up - this is a real fallback for any platform whose memory-sizing heuristic
+            // overshoots, not just this one.
+            final long GEOMETRY_BUFFER_FLOOR = 512L*1024*1024;
+            while (true) {
+                glGetError();//Clear any errors
+                if (!(Capabilities.INSTANCE.isNvidia&& ThreadUtils.isWindows&&Capabilities.INSTANCE.sparseBuffer)) {//This hack makes it so it doesnt crash on renderdoc
+                    buffer = new GlBuffer(capacity, false);//Only do this if we are not on nvidia
+                    //TODO: FIXME: TEST, see if the issue is that we are trying to zero the entire buffer, try only zeroing increments
+                    // or dont zero it at all
                 } else {
-                    throw new IllegalStateException("Unable to allocate geometry buffer, got gl error " + error);
+                    Logger.info("Running on nvidia, using workaround sparse buffer allocation");
                 }
+                int error = glGetError();
+                if (error != GL_NO_ERROR || buffer == null) {
+                    if ((buffer == null || error == GL_OUT_OF_MEMORY) && Capabilities.INSTANCE.sparseBuffer) {
+                        if (buffer != null) {
+                            Logger.error("Failed to allocate geometry buffer, attempting workaround with sparse buffers");
+                            buffer.free();
+                        }
+                        buffer = new GlBuffer(capacity, GL_SPARSE_STORAGE_BIT_ARB);
+                        //buffer.zero();
+                        error = glGetError();
+                        if (error != GL_NO_ERROR) {
+                            buffer.free();
+                            throw new IllegalStateException("Unable to allocate geometry buffer using workaround, got gl error " + error);
+                        }
+                    } else if (error == GL_OUT_OF_MEMORY && capacity > GEOMETRY_BUFFER_FLOOR) {
+                        if (buffer != null) {
+                            buffer.free();
+                            buffer = null;
+                        }
+                        long retryCapacity = Math.max(GEOMETRY_BUFFER_FLOOR, capacity/2);
+                        Logger.error("Failed to allocate geometry buffer of size " + capacity
+                                + " (GL_OUT_OF_MEMORY), retrying at " + retryCapacity + " ("
+                                + (retryCapacity/(1024*1024)) + "MB)");
+                        capacity = retryCapacity;
+                        continue;
+                    } else {
+                        throw new IllegalStateException("Unable to allocate geometry buffer, got gl error " + error);
+                    }
+                }
+                break;
             }
             String extra = "";
             if (driverMemory != -1) {
