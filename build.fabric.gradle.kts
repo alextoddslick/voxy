@@ -131,12 +131,14 @@ loom {
                 environmentVariable("MESA_LOADER_DRIVER_OVERRIDE", "zink")
                 environmentVariable("MESA_GL_VERSION_OVERRIDE", "4.6")
                 environmentVariable("MESA_GLSL_VERSION_OVERRIDE", "460")
-                // Task 8 debugging lever (brief-sanctioned): driver-side debug output.
+                // Driver-side debug output, opt-in via -PmesaDebug (costs real FPS when on).
                 // NOTE: ZINK_DEBUG=validation was also tried and causes a hard native SIGSEGV
                 // here ("MESA: error: Failed to load validation layer") - this Mesa build has no
                 // VK_LAYER_KHRONOS_validation installed, so requesting the validation debug
                 // channel crashes the loader itself rather than degrading gracefully. Left out.
-                environmentVariable("MESA_DEBUG", "1")
+                if (project.hasProperty("mesaDebug")) {
+                    environmentVariable("MESA_DEBUG", "1")
+                }
                 if (interposeLib.exists()) {
                     environmentVariable("DYLD_INSERT_LIBRARIES", interposeLib.absolutePath)
                 }
