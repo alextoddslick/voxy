@@ -13,6 +13,7 @@ import me.cortex.voxy.client.core.rendering.section.backend.AbstractSectionRende
 import me.cortex.voxy.client.core.rendering.util.DepthFramebuffer;
 import me.cortex.voxy.client.core.rendering.util.DownloadStream;
 import me.cortex.voxy.client.core.util.GPUTiming;
+import me.cortex.voxy.client.core.util.JomlAddressWriter;
 import me.cortex.voxy.common.util.TrackedObject;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL30;
@@ -176,9 +177,9 @@ public abstract class AbstractRenderPipeline extends TrackedObject {
 
         blitShader.bind();
         glBindTextureUnit(0, srcDepthTex);
-        new Matrix4f(viewport.MVP).invert().getToAddress(SCRATCH);
+        JomlAddressWriter.put(new Matrix4f(viewport.MVP).invert(), SCRATCH);
         nglUniformMatrix4fv(1, 1, false, SCRATCH);//inverse fromProjection
-        targetTransform.getToAddress(SCRATCH);//new Matrix4f(tooProjection).mul(vp.modelView).get(data);
+        JomlAddressWriter.put(targetTransform, SCRATCH);//new Matrix4f(tooProjection).mul(vp.modelView).get(data);
         nglUniformMatrix4fv(2, 1, false, SCRATCH);//tooProjection
 
         glEnable(GL_DEPTH_TEST);

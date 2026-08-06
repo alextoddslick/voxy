@@ -125,6 +125,17 @@ loom {
                 vmArg("-Dorg.lwjgl.egl.libname=$mesa/lib/libEGL.dylib")
                 vmArg("-Dorg.lwjgl.opengl.libname=$mesa/lib/libGL.dylib")
                 vmArg("-Dorg.lwjgl.glfw.libname=$glfwLib")
+                // Task 8: JOML 1.10.5's "MemUtilUnsafe" fast path validates its Unsafe
+                // field-offset assumptions for Matrix4f et al at class-init time
+                // (MemUtil$MemUtilUnsafe.checkMatrix4f) and throws UnsupportedOperationException
+                // ("Unexpected Matrix4f element offset") on this JDK 21 aarch64 build, where the
+                // JVM's actual field layout doesn't match what JOML 1.10.5 assumed. This is a
+                // pure JVM/library incompatibility (unrelated to the GL backend) that surfaces
+                // the moment anything calls the affected methods - Voxy's own call sites were
+                // rewritten (see JomlAddressWriter) to avoid them entirely, so this flag is now
+                // defense-in-depth: it forces JOML's NIO-based fallback for any remaining/future
+                // caller (mods, Iris shaderpacks) instead of silently corrupting or hard-crashing.
+                vmArg("-Djoml.nounsafe=true")
             }
         }
     }

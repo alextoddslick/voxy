@@ -12,6 +12,7 @@ import me.cortex.voxy.client.core.gl.shader.ShaderLoader;
 import me.cortex.voxy.client.core.gl.shader.ShaderType;
 import me.cortex.voxy.client.core.rendering.util.SharedIndexBuffer;
 import me.cortex.voxy.client.core.rendering.util.UploadStream;
+import me.cortex.voxy.client.core.util.JomlAddressWriter;
 import me.cortex.voxy.common.Logger;
 import net.minecraft.client.Minecraft;
 import org.joml.Matrix4f;
@@ -105,7 +106,7 @@ public class ChunkBoundRenderer {
             int bx = (int)(viewport.cameraX);
             int by = (int)(viewport.cameraY);
             int bz = (int)(viewport.cameraZ);
-            new Vector3i(bx, by, bz).getToAddress(ptr); ptr += 4*4;
+            JomlAddressWriter.put(new Vector3i(bx, by, bz), ptr); ptr += 4*4;
 
             var negInnerBlock = new Vector3f(
                     (float) (viewport.cameraX - bx),
@@ -113,8 +114,8 @@ public class ChunkBoundRenderer {
                     (float) (viewport.cameraZ - bz));
 
 
-            negInnerBlock.getToAddress(ptr); ptr += 4*3;
-            viewport.MVP.translate(negInnerBlock.negate(), new Matrix4f()).getToAddress(matPtr);
+            JomlAddressWriter.put(negInnerBlock, ptr); ptr += 4*3;
+            JomlAddressWriter.put(viewport.MVP.translate(negInnerBlock.negate(), new Matrix4f()), matPtr);
             MemoryUtil.memPutFloat(ptr, renderDistance); ptr += 4;
         }
         UploadStream.INSTANCE.commit();
