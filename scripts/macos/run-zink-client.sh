@@ -12,7 +12,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
+# Task 8 finding I1: Voxy's default (~4GB) geometry buffer allocation genuinely fails with
+# GL_OUT_OF_MEMORY on Zink/KosmicKrisp (no sparse-buffer fallback exists on this platform) - the
+# client hard-crashes at world join without an override. Default to a size that's been verified
+# to allocate successfully here (512MB); pass a later -PgeomBufMB=<n> of your own on the command
+# line to override it (Gradle's last -P for a given property wins, so it appearing after this
+# default in "$@" takes precedence).
 JAVA_HOME=$(/usr/libexec/java_home -v 21) exec ./gradlew :1.21.1-fabric:runClient \
   -Porg.gradle.jvmargs="-Xmx4G" \
   -PzinkRun \
+  -PgeomBufMB=512 \
   --console=plain "$@"
