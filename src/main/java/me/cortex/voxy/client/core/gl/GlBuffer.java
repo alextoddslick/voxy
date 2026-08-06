@@ -1,5 +1,6 @@
 package me.cortex.voxy.client.core.gl;
 
+import me.cortex.voxy.client.core.rendering.util.UploadStream;
 import me.cortex.voxy.common.util.TrackedObject;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.system.MemoryUtil;
@@ -65,6 +66,25 @@ public class GlBuffer extends TrackedObject {
 
     public GlBuffer zeroRange(long offset, long size) {
         nglClearNamedBufferSubData(this.id, GL_R8UI, offset, size, GL_RED_INTEGER, GL_UNSIGNED_BYTE, 0);
+        return this;
+    }
+
+    // Task 8: native buffer-clear calls (zero()/zeroRange(), i.e. glClearNamedBufferData/
+    // glClearNamedBufferSubData) hang the Zink/KosmicKrisp driver when issued every frame -
+    // see UploadStream's per-frame conversions and task-8-report.md for the full investigation.
+    // This is the single gating point for that workaround: on KosmicKrisp, route the zero through
+    // UploadStream (a CPU-side write into a persistently-mapped staging buffer, flushed via
+    // glCopyNamedBufferSubData) instead of the native clear entry point; every other platform
+    // keeps using the native clear unchanged (this is a KosmicKrisp-specific driver bug, not a
+    // general Zink or Mesa issue - see Capabilities.isKosmicKrisp).
+    // Note: does not call UploadStream.commit() - callers batch their own commit() the same way
+    // they did before this helper existed.
+    public GlBuffer zeroRangeSafe(long offset, long size) {
+        if (Capabilities.INSTANCE.isKosmicKrisp) {
+            MemoryUtil.memSet(UploadStream.INSTANCE.upload(this, offset, size), 0, size);
+        } else {
+            this.zeroRange(offset, size);
+        }
         return this;
     }
 

@@ -254,20 +254,20 @@ public class HierarchicalOcclusionTraverser {
         PrintfDebugUtil.bind();
 
         // Task 8: native buffer-clear calls (glClearNamedBufferData/glClearNamedBufferSubData,
-        // i.e. GlBuffer.zero()/zeroRange() and the raw nglClearNamedBufferSubData below) hang the
-        // Zink/KosmicKrisp driver after a short time (seconds) of being called every frame -
-        // reproduced consistently, confirmed via jstack (render thread stuck forever inside the
-        // native call, CPU time frozen, no crash/error). See MDICSectionRenderer.buildDrawCalls
-        // for the fuller explanation and task-8-report.md for the investigation. Route both
-        // per-frame clears here through UploadStream's upload()+commit() (a CPU-side write into a
-        // persistently-mapped staging buffer, flushed via glCopyNamedBufferSubData) instead, since
-        // that path is already exercised every frame elsewhere without hanging.
+        // i.e. GlBuffer.zero()/zeroRange()) hang the Zink/KosmicKrisp driver after a short time
+        // (seconds) of being called every frame - reproduced consistently, confirmed via jstack
+        // (render thread stuck forever inside the native call, CPU time frozen, no crash/error).
+        // See MDICSectionRenderer.buildDrawCalls for the fuller explanation and task-8-report.md
+        // for the investigation. GlBuffer.zeroRangeSafe() gates the fix to KosmicKrisp only
+        // (routing through UploadStream's upload()+commit() there, a CPU-side write into a
+        // persistently-mapped staging buffer flushed via glCopyNamedBufferSubData); every other
+        // platform keeps using the native clear unchanged.
         if (RenderStatistics.enabled) {
-            MemoryUtil.memSet(UploadStream.INSTANCE.upload(this.statisticsBuffer, 0, this.statisticsBuffer.size()), 0, this.statisticsBuffer.size());
+            this.statisticsBuffer.zeroRangeSafe(0, this.statisticsBuffer.size());
         }
 
         //Clear the render output counter
-        MemoryUtil.memPutInt(UploadStream.INSTANCE.upload(viewport.getRenderList(), 0, 4), 0);
+        viewport.getRenderList().zeroRangeSafe(0, 4);
         UploadStream.INSTANCE.commit();
 
         //Traverse
@@ -361,7 +361,14 @@ public class HierarchicalOcclusionTraverser {
     private void downloadResetRequestQueue() {
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         DownloadStream.INSTANCE.download(this.requestBuffer, this::forwardDownloadResult);
-        nglClearNamedBufferSubData(this.requestBuffer.id, GL_R32UI, 0, 4, GL_RED_INTEGER, GL_UNSIGNED_INT, 0);
+        // Task 8 (I-1): was a raw nglClearNamedBufferSubData - the one per-frame clear in this file
+        // that hadn't been converted, contradicting the hang analysis above. DownloadStream.download()
+        // above already commits its own copy-out synchronously (see DownloadStream.download()), so
+        // it is safely ordered before this reset either way; mirror the sibling conversions above by
+        // routing the reset through the gated helper and committing immediately, before this buffer's
+        // next GPU use (next frame's traversal).
+        this.requestBuffer.zeroRangeSafe(0, 4);
+        UploadStream.INSTANCE.commit();
     }
 
     private void forwardDownloadResult(long ptr, long size) {
