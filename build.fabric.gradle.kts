@@ -143,6 +143,17 @@ loom {
                 // caller (mods, Iris shaderpacks) instead of silently corrupting or hard-crashing.
                 vmArg("-Djoml.nounsafe=true")
 
+                // Task 8 (review round 1): keep the dev-client window small during headless
+                // verification runs - a full-size unfocused Zink window has been observed driving
+                // WindowServer CPU very high on this machine. Unconditional (not gated behind a
+                // property) since there's no reason a headless zinkRun launch would ever want a
+                // large window; combine with `nice -n 15` on the launch command and a lowered
+                // maxFps (see run/options.txt) for the same reason.
+                programArg("--width")
+                programArg("854")
+                programArg("--height")
+                programArg("480")
+
                 // Task 8: headless world auto-load for the dev client, since the client is
                 // launched with no visible window to click "Singleplayer" -> world in. Gradle's
                 // runClient task interprets `./gradlew ... --quickPlaySingleplayer foo` as an
