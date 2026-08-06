@@ -44,6 +44,20 @@ public class SSAO {
         } else if (mode == SSAOMode.BEST) {
             return new SSAO(properties, true, 24);
         } else if (mode == SSAOMode.AUTO) {
+            // Task 8: BETTER/BEST SSAO's per-frame glGetNamedFramebufferAttachmentParameteri
+            // query (see computeSSAO below) hangs the Zink/KosmicKrisp driver after a short time
+            // of being called every frame - reproduced consistently, confirmed via jstack (render
+            // thread stuck forever inside the native call). This is unrelated to actual GPU memory
+            // availability (which is what the rest of this heuristic is based on) - it reproduces
+            // regardless of how much memory is reported free - so it must be checked before, and
+            // independently of, the memory-based selection below. It's also unrelated to the
+            // GL_NVX_gpu_memory_info-reporting quirk noted elsewhere in this codebase (KosmicKrisp
+            // reports a large "dedicated memory" figure due to Apple Silicon's unified memory
+            // model, which would otherwise select BEST here) - BASIC is forced here regardless of
+            // what that number says, specifically because of this query bug, not because of it.
+            if (Capabilities.INSTANCE.isZink) {
+                return createSSAO(properties, SSAOMode.BASIC);
+            }
             if (Capabilities.INSTANCE.canQueryGpuMemory) {
                 if (Capabilities.INSTANCE.totalDedicatedMemory < 2_500_000_000L) {
                     return createSSAO(properties, SSAOMode.BASIC);//Create a basic instance (cant query memory (probably intel igpu or less then 2.5gb vram)

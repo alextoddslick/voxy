@@ -37,6 +37,7 @@ public class Capabilities {
     public final long ssboMaxSize;
     public final int ssboBindingAlignment;
     public final boolean isMesa;
+    public final boolean isZink;
     public final boolean canQueryGpuMemory;
     public final long totalDedicatedMemory;//Bytes, dedicated memory
     public final long totalDynamicMemory;//Bytes, total allocation memory - dedicated memory
@@ -88,6 +89,12 @@ public class Capabilities {
         this.ssboBindingAlignment = glGetInteger(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT);
 
         this.isMesa = glGetString(GL_VERSION).toLowerCase(Locale.ROOT).contains("mesa");
+        // Task 8: specifically Zink (Mesa's GL-on-Vulkan translation layer), not Mesa's native GL
+        // drivers (RadeonSI/Iris/ANV etc) - some Zink-specific DSA/named-object entry points
+        // (buffer clears, framebuffer-attachment queries) have been found to hang under Zink on
+        // this machine's KosmicKrisp backend, so callers that need to work around Zink
+        // specifically (rather than Mesa broadly) should check this instead of isMesa.
+        this.isZink = glGetString(GL_RENDERER).toLowerCase(Locale.ROOT).contains("zink");
         var vendor = glGetString(GL_VENDOR).toLowerCase(Locale.ROOT);
         this.isIntel = vendor.contains("intel");
         this.isNvidia = vendor.contains("nvidia");
