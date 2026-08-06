@@ -19,7 +19,6 @@ cd "$(dirname "$0")/../.."
 # line to override it (Gradle's last -P for a given property wins, so it appearing after this
 # default in "$@" takes precedence).
 JAVA_HOME=$(/usr/libexec/java_home -v 21) exec ./gradlew :1.21.1-fabric:runClient \
-  -Porg.gradle.jvmargs="-Xmx4G" \
   -PzinkRun \
   -PgeomBufMB=512 \
   --console=plain "$@"

@@ -27,7 +27,7 @@ public abstract class VoxyClient {
 
         boolean systemSupported = Capabilities.INSTANCE.compute && !Capabilities.INSTANCE.hasBrokenDepthSampler;
         if (systemSupported && !Capabilities.INSTANCE.indirectParameters) {
-            Logger.warn("GL_ARB_indirect_parameters not supported (expected on macOS/Zink), using multi-draw-indirect fallback");
+            Logger.warn("GL_ARB_indirect_parameters not supported (no GL_ARB_indirect_parameters), using multi-draw-indirect fallback");
         }
         if (!systemSupported) {
              Logger.error("Voxy is unsupported on your system.");
