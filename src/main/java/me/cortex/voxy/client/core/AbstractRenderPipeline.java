@@ -99,6 +99,7 @@ public abstract class AbstractRenderPipeline extends TrackedObject {
     }
 
     public void runPipeline(Viewport<?> viewport, int sourceFrameBuffer, int srcWidth, int srcHeight) {
+        RenderStatistics.maybeLogPeriodic();
         int depthTexture = this.setup(viewport, sourceFrameBuffer, srcWidth, srcHeight);
 
         var rs = ((AbstractSectionRenderer)this.sectionRenderer);

@@ -183,6 +183,17 @@ loom {
                 if (project.hasProperty("geomBufMB")) {
                     vmArg("-Dvoxy.geometryBufferSizeOverrideMB=" + project.property("geomBufMB"))
                 }
+                // Task 8 (review finding C1): RenderStatistics is normally only turned on
+                // reactively when the F3 debug screen opens (MixinDebugScreenOverlay), and its
+                // counters are only ever surfaced via that same overlay - neither is reachable
+                // headlessly (no key input, no screen capture). This forces RenderStatistics on
+                // from world join and makes RenderResourceReuse/AbstractRenderPipeline log the
+                // per-LOD-layer visibleSections/quadCount/hierarchical* counters periodically to
+                // the log file instead, as the closest headless equivalent of the F3 evidence.
+                // Usage: add -PvoxyDebugStats to the runClient invocation.
+                if (project.hasProperty("voxyDebugStats")) {
+                    vmArg("-Dvoxy.forceStatistics=true")
+                }
             }
         }
     }
