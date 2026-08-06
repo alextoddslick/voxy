@@ -25,7 +25,17 @@
 #import <voxy:lod/gl46/bindings.glsl>
 #import <voxy:lod/quad_util.glsl>
 
-layout(location = 0) out flat uvec4 interData;
+//Note: "flat" is intentionally NOT declared here (only on the matching quads.frag "in").
+// Mesa/Zink (as used by KosmicKrisp on macOS) has a compiler bug where an explicit
+// interpolation qualifier (flat/smooth/noperspective/centroid) on a vertex shader
+// "out" triggers a spurious "invalid xfb_buffer" validation error whenever the driver
+// reports GL_MAX_TRANSFORM_FEEDBACK_BUFFERS=0 (as KosmicKrisp does, since it has no
+// transform-feedback support at all) - it implicitly assigns/validates a default
+// xfb_buffer=0 for interpolation-qualified outputs even though no XFB capture is ever
+// requested. GLSL allows the interpolation qualifier to be declared on just one side
+// of a matched in/out pair, so declaring it only on the fragment input avoids the bug
+// losslessly on every platform.
+layout(location = 0) out uvec4 interData;
 #ifndef USE_NV_BARRY
 layout(location = 1) out vec2 uv;
 #endif
@@ -39,7 +49,7 @@ out gl_PerVertex {
 #endif
 
 #ifdef DEBUG_RENDER
-layout(location = 7) out flat uint quadDebug;
+layout(location = 7) out uint quadDebug;//see note above re: "flat" and Mesa/Zink
 #endif
 
 vec2 taaShift();

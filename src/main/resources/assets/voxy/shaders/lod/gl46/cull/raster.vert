@@ -10,8 +10,11 @@
 #import <voxy:lod/gl46/bindings.glsl>
 #import <voxy:util/depthutils.glsl>
 
-flat out uint id;
-flat out uint value;
+//"flat" declared only on raster.frag's matching inputs - see quads3.vert for why
+// (Mesa/Zink KosmicKrisp compiler bug: spurious xfb_buffer error when
+// GL_MAX_TRANSFORM_FEEDBACK_BUFFERS=0 and a vertex "out" has an interpolation qualifier).
+out uint id;
+out uint value;
 
 
 #ifdef TAA

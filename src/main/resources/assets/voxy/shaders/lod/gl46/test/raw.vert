@@ -12,7 +12,10 @@
 #import <voxy:lod/block_model.glsl>
 #import <voxy:lod/gl46/bindings.glsl>
 
-layout(location = 6) out flat uint quadDebug;
+//"flat" declared only on raw.frag's matching input - see quads3.vert for why
+// (Mesa/Zink KosmicKrisp compiler bug: spurious xfb_buffer error when
+// GL_MAX_TRANSFORM_FEEDBACK_BUFFERS=0 and a vertex "out" has an interpolation qualifier).
+layout(location = 6) out uint quadDebug;
 
 uint extractLodLevel() {
     return uint(gl_BaseInstance)>>27;

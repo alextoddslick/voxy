@@ -17,7 +17,10 @@ layout(binding = 2, std430) restrict buffer NodeList {
     uint nodeQueue[];
 };
 
-layout(location = 1) out flat vec4 colour;
+//"flat" declared only on frag.frag's matching input - see quads3.vert for why
+// (Mesa/Zink KosmicKrisp compiler bug: spurious xfb_buffer error when
+// GL_MAX_TRANSFORM_FEEDBACK_BUFFERS=0 and a vertex "out" has an interpolation qualifier).
+layout(location = 1) out vec4 colour;
 
 void main() {
     UnpackedNode node;
