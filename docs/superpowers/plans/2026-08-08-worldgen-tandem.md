@@ -569,10 +569,16 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 ## Done When
 
-All four spec checkpoints have passed with pasted log evidence in the task reports, `docs/macos.md`
-documents the pairing, and `JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew :1.21.1-fabric:build`
-The plan is DONE when Tasks 1-4 are complete and the build passes. Note that checkpoint 4b FAILED
-and 4a is UNPROVEN - that is the honest outcome, documented rather than fixed. Fixing the render
-stall is explicitly a separate piece of work.
-turned out to be a false alarm from a bad grep — see the correction in the spec's Integration
-surface section. There are no gaps to report.
+> **Amended 2026-08-08.** The original bar here was "all four checkpoints have passed." They did not:
+> checkpoint 3 passed, 4a is UNPROVEN, and 4b FAILED. That is the real result, and the plan closes by
+> documenting it rather than by pretending otherwise.
+
+Tasks 1-4 are complete, every checkpoint has a verdict backed by pasted evidence in the task reports,
+`docs/macos.md` records the render stall and the A/B that isolated it, and
+`JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew :1.21.1-fabric:build` succeeds.
+
+Fixing the stall is deliberately out of scope — it needs its own investigation, starting from the
+question of which GL call the ingest path makes that the Voxy-alone path does not.
+
+The spec's original "three known integration gaps" were a false alarm from a bad grep — see the
+correction in the spec's Integration surface section. There are no integration gaps to report.
