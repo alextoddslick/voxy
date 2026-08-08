@@ -15,9 +15,14 @@ public class SharedIndexBuffer {
     private final GlBuffer indexBuffer;
 
     public SharedIndexBuffer() {
-        this.indexBuffer = new GlBuffer((1<<16)*6*2 + 6*2*3);
+        this.indexBuffer = new GlBuffer((1<<16)*6*2 + 6*2*3*2);
         var quadIndexBuff = generateQuadIndicesShort(16380);
-        var cubeBuff = generateCubeIndexBuffer();
+        //The cube indices here are shorts, not bytes: this buffer feeds the occlusion-cull
+        //glDrawElementsIndirect, and an 8-bit index type has no Metal equivalent
+        //(MTLIndexType is uint16/uint32 only). On Zink/KosmicKrisp that makes Mesa's u_vbuf
+        //take its fallback path, which CPU-reads the indirect buffer mid-frame and stalls the
+        //pipeline on every draw. Index values here are 0-7, so 16 bits costs 36 extra bytes.
+        var cubeBuff = generateCubeIndexBufferShort();
 
         long ptr = UploadStream.INSTANCE.upload(this.indexBuffer, 0, this.indexBuffer.size());
         quadIndexBuff.cpyTo(ptr);
@@ -48,6 +53,20 @@ public class SharedIndexBuffer {
         cubeBuff.cpyTo(UploadStream.INSTANCE.upload(this.indexBuffer, 0, this.indexBuffer.size()));
         UploadStream.INSTANCE.commit();
         cubeBuff.free();
+    }
+
+    //16-bit twin of generateCubeIndexBuffer, for the shared quad+cube buffer used by the
+    //occlusion-cull indirect draw. Same winding, same 36 indices.
+    private static MemoryBuffer generateCubeIndexBufferShort() {
+        var byteBuffer = generateCubeIndexBuffer();
+        var buffer = new MemoryBuffer(6L*2*3*2);
+        long src = byteBuffer.address;
+        long dst = buffer.address;
+        for (int i = 0; i < 6*2*3; i++) {
+            MemoryUtil.memPutShort(dst + (i * 2L), (short) (MemoryUtil.memGetByte(src + i) & 0xFF));
+        }
+        byteBuffer.free();
+        return buffer;
     }
 
     private static MemoryBuffer generateCubeIndexBuffer() {

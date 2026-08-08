@@ -326,7 +326,7 @@ public class MDICSectionRenderer extends AbstractSectionRenderer<MDICViewport, B
             glColorMask(false, false, false, false);
             glDepthMask(false);
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT|GL_COMMAND_BARRIER_BIT);
-            glDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_BYTE, 6*4);
+            glDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_SHORT, 6*4);
             glDepthMask(true);
             glColorMask(true, true, true, true);
             glDisable(GL_DEPTH_TEST);

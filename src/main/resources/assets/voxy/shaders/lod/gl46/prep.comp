@@ -18,7 +18,9 @@ void main() {
 
     cullDrawIndirectCommand.count = 6*2*3;
     cullDrawIndirectCommand.instanceCount = sectionCount;
-    cullDrawIndirectCommand.firstIndex = (1<<16)*6*2;
+    //firstIndex is in index units. The cube indices live at byte offset (1<<16)*6*2 in
+    //SharedIndexBuffer.INSTANCE and are 16-bit, so the index-unit offset is half that.
+    cullDrawIndirectCommand.firstIndex = (1<<16)*6;
     cullDrawIndirectCommand.baseVertex = 0;
     cullDrawIndirectCommand.baseInstance = 0;
 }
