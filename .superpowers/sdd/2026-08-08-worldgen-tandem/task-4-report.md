@@ -114,3 +114,90 @@ The spec's originally-claimed "three integration gaps" were a false alarm from a
 not reintroduced anywhere in this doc. Fixing the stall itself is out of scope for this plan; the
 documented next step is finding which GL call the ingest path makes that the Voxy-alone path does
 not.
+
+---
+
+## Fix Round 1 (review response)
+
+One Critical and two Minor findings came back. All addressed below; nothing from the original
+report is retracted except the specific errors identified.
+
+### Critical: black-window sentence inverted the source report's screen-lock finding
+
+The reviewer is right, and this was a real error, not a wording nit. `docs/macos.md`'s original
+sentence read "A separate, earlier confounded run (heavy system memory pressure, screen locked)
+showed a solid-black window instead of a frozen frame" — but the solid-black screenshot comes from
+`task-3-report.md`'s **Attempt 3**, which states three separate times that the screen was
+confirmed **unlocked** for that specific attempt (lines 241, 298-299, 438-439 of that report). The
+screen-locked attempt was **Attempt 1**, which never produced a usable screenshot at all — its
+`screencapture` output only ever caught the macOS lock screen, which that report explicitly calls
+"not evidence of anything about the app."
+
+This is the opposite of a minor mix-up: the correct reading is that the render stall blacked out
+the window *despite* the screen being unlocked and actively in use (a YouTube video was on screen
+at the time) — the more alarming finding, not a discountable one. My original sentence would have
+led a future investigator to wrongly deprioritize the black-window symptom as a probable
+screen-lock artifact.
+
+I also over-claimed "heavy system memory pressure" as a concurrent condition for that same
+screenshot. Checking `task-3-report.md` again: the only concrete low-memory reading tied to
+Attempt 3 is the `vm_stat` free-page jump observed "immediately after" the process's death at
+~16:13:50, and the screenshot was taken ~10-15s after the 16:12:18 `RenderStatistics` line, i.e.
+~16:12:28-33 — roughly 80 seconds *before* that low-memory reading, not concurrent with it. Fixed
+`docs/macos.md` (lines 317-325 as of this fix) to:
+
+- Attribute the black-window screenshot correctly to Attempt 3, explicitly unlocked and in active
+  use, and state that this rules out screen-lock as an explanation for that symptom rather than
+  supporting it.
+- Remove the "heavy system memory pressure" claim as concurrent, and instead note the low-memory
+  reading is timestamped roughly 80 seconds after the screenshot — i.e. memory pressure at the
+  moment the window went black is not established.
+- Keep the original point intact where it was correct: the two visual outcomes (frozen frame in
+  the Task 3b A/B vs. solid black in Task 3's Attempt 3) are genuinely different symptoms and
+  neither should be assumed to generalize to the other.
+
+### Minor 1: stale `git diff --stat` in the "Scope check" section
+
+The `1 file changed, 81 insertions(+)` pasted in the original "Scope check" section above was taken
+from an intermediate `git diff --stat` run before the doc edit was finalized, and was never
+re-run before the report was written — so "confirmed via `git diff --stat`" wasn't actually
+evidence of what shipped in the commit. The commit that actually landed (`f6f926b0`) is
+`1 file changed, 87 insertions(+)`, confirmed via `git show --stat HEAD` immediately after that
+commit (see the transcript). Leaving the original "Scope check" paragraph above uncorrected, as
+historical record, per this section's job of noting the error rather than silently rewriting it.
+
+This fix round's own doc edit (commit `8f7e0da3`) is `1 file changed, 20 insertions(+), 8
+deletions(-)`, confirmed via `git diff --cached --stat` immediately before committing it. The
+cumulative diff for `docs/macos.md` across both Task 4 commits, against the pre-Task-4 base
+(`0c0ae127`), is `1 file changed, 99 insertions(+)` (`git diff --stat 0c0ae127 -- docs/macos.md`).
+
+### Minor 2: "natural next step" paragraph was generic, carried over verbatim from the brief
+
+The reviewer is right that `task-3b-report.md` has a sharper, more current hypothesis than the
+generic "find which GL call the ingest path makes that the Voxy-alone path does not." That
+report's Verdict section identifies a specific, testable correlation: both A/B arms independently
+hit a macOS GPU firmware-detected-lockup event (`gpuEvent-java-*.ips`,
+`restart_reason_desc: "firmware-detected lockup"`) at or immediately after world join, but Voxy
+alone recovers cleanly from two such events and keeps rendering, while the paired run's only such
+event (3 seconds after join) coincides almost exactly with the onset of the permanent stall.
+Rewrote the "next step" paragraph in `docs/macos.md` to lead with this correlation and the sharper
+question it raises — whether `voxyworldgenv2` leaves a GPU fence outstanding across that
+lockup/restart boundary that Voxy-alone does not — while keeping the original "which GL call the
+ingest path makes" framing folded in as the more general form of the same question, per the
+reviewer's "instead of, or alongside" guidance.
+
+### Build re-verification
+
+```
+$ JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew :1.21.1-fabric:build --console=plain 2>&1 | tail -5
+> Task :1.21.1-fabric:check UP-TO-DATE
+> Task :1.21.1-fabric:build UP-TO-DATE
+
+BUILD SUCCESSFUL in 5s
+14 actionable tasks: 14 up-to-date
+```
+
+Everything the reviewer marked as independently verified and correct (sample counts,
+`RenderStatistics` line counts, the 480-576 chunk range, the UNPROVEN framing of LOD delivery, the
+layer-1 caution, and the absence of any "integration gaps" narrative) is unchanged from the
+original submission.
