@@ -6,35 +6,38 @@ driver, which translates GL calls to Vulkan, on top of Mesa's `kosmickrisp` Vulk
 native build — you build Mesa and a patched GLFW yourself and launch the dev client through a
 Gradle property that wires up the environment for you.
 
-This has been validated on an Apple M2 Max. Read the status section below before investing time
-in the build — there is one known unresolved driver issue that affects every session.
+This has been validated on an Apple M2 Max.
 
 ## Status
 
-**Works:**
-- A hardware-accelerated OpenGL 4.6 core-profile context via Zink + KosmicKrisp
-  (`zink Vulkan 1.3(Apple M2 Max (MESA_KOSMICKRISP))`).
-- Voxy initializes, allocates its geometry buffer, and creates its render system
-  (`MDICSectionRenderer` backend, `NormalRenderPipeline`).
-- Worlds load and the LOD pipeline issues real draws — `RenderStatistics` shows non-zero
-  `hierarchicalRenderSections`/`quadCount` for the nearest LOD layer within a few seconds of
-  joining a world.
-- The zero-tail multi-draw-indirect fallback path (for GPUs without
-  `GL_ARB_indirect_parameters`) works correctly, and can be exercised on any platform via
-  `-PvoxyForceNoIndirectCount` for testing.
+**Works:** a hardware-accelerated OpenGL 4.6 core-profile context
+(`zink Vulkan 1.4(Apple M2 Max (MESA_KOSMICKRISP))`), worlds load, and the LOD pipeline renders
+across layers — `RenderStatistics` shows non-zero `hierarchicalRenderSections`/`quadCount` for
+layer 0 and beyond. Multi-minute sessions run without hanging. The zero-tail
+multi-draw-indirect fallback (for GPUs without `GL_ARB_indirect_parameters`) also works and can
+be exercised anywhere via `-PvoxyForceNoIndirectCount`.
 
-**Known limitation — sessions eventually freeze:** every observed session, however long it
-survives, eventually hangs on the render thread inside `glFenceSync`/`glGetSynciv`
-(`GlFence`, used throughout Voxy's GPU/CPU synchronization for uploads and downloads). This
-presents as a silent freeze, not a crash: no exception, no log line, CPU time frozen across
-repeated `jstack` samples. Two earlier, shallower hangs in the same family (a native
-buffer-clear call, and a per-frame framebuffer-attachment query used by SSAO) were found and
-fixed in this codebase; the `glFenceSync` hang is a driver-level fault in KosmicKrisp's Vulkan
-fence/semaphore handling with no code-level workaround, since `GlFence` is core, unavoidable
-infrastructure used by every upload/download path. See the "Debugging" section below for how to
-confirm you've hit it, and `.superpowers/sdd/2026-08-05-macos-support/task-8-report.md`
-("Root cause #3") for the full investigation, including the two fixed hangs and the mitigations
-that were tried and reverted.
+> **Correction (2026-08-07).** Earlier revisions of this document described an unresolved
+> KosmicKrisp `glFenceSync` driver hang with "no code-level workaround". **That was a
+> misdiagnosis.** It was reached from `jstack` output, and `jstack` cannot see past the JNI
+> boundary — every stack in that investigation truncated at
+> `org.lwjgl.opengl.*.nglXxx(Native Method)`, so the actual blocking frame was never observed.
+> Mesa runs GL on a native worker thread named `gl0` (glthread is on by default for Zink,
+> `driinfo_zink.h`), which is not a JVM thread at all.
+>
+> A native `sample` of the process showed the real stack immediately: the block was
+> `u_vbuf_draw_vbo -> tc_buffer_map -> zink_buffer_map -> batch_usage_wait`, a mid-draw buffer
+> map stalling on GPU completion. `glFenceSync` appeared only as
+> `_mesa_marshal_FenceSync -> _mesa_glthread_finish`, i.e. the sync point that forces glthread
+> to drain a backlog containing the blocking draw. That also explains the "whack-a-mole" in the
+> old investigation: the three supposedly distinct hang sites (`glClearNamedBufferSubData`,
+> `glGetNamedFramebufferAttachmentParameteriv`, `glFenceSync`) are all glthread *sync points*
+> that force a pipe flush, so removing one merely relocated the symptom to the next.
+>
+> Root cause: Voxy's occlusion-cull draw used 8-bit indices, which Metal cannot represent
+> (`MTLIndexType` is uint16/uint32 only), forcing Mesa's `u_vbuf` fallback to CPU-read the
+> indirect buffer every frame. Fixed by widening those indices to 16-bit. **Use
+> `sample`/`lldb`, never `jstack`, on this stack.**
 
 **MoltenVK is a dead end today.** Zink negotiates the same GL 4.6 core context on top of
 MoltenVK as it does on KosmicKrisp (Vulkan 1.4 vs. 1.3), and correctly detects and logs the
@@ -47,12 +50,30 @@ as a `-PvkDriver=moltenvk` option only in case a future Mesa/MoltenVK release fi
 
 **SSAO auto-downgrades to BASIC on KosmicKrisp.** `SSAOMode.AUTO` picks BETTER/BEST based on
 reported dedicated GPU memory; KosmicKrisp reports Apple Silicon's unified memory as ~24GB of
-"dedicated" memory via `GL_NVX_gpu_memory_info`, so AUTO always tries to pick BEST. BETTER/BEST's
-per-frame framebuffer-attachment query (`glGetNamedFramebufferAttachmentParameteriv`) is one of
-the two hangs mentioned above, so on Zink/KosmicKrisp specifically (`Capabilities.isKosmicKrisp`,
-not the broader `isZink` — this does not affect Zink on Linux/RADV/ANV/NVK) `SSAOMode.AUTO` is
-forced to BASIC, with a log line explaining why. Explicit user overrides to BETTER/BEST are not
-gated and will hit the hang.
+"dedicated" memory via `GL_NVX_gpu_memory_info`, so AUTO always tries to pick BEST. BETTER/BEST
+issues a per-frame `glGetNamedFramebufferAttachmentParameteriv`, a glthread sync point that
+forces a pipe flush every frame, so on Zink/KosmicKrisp specifically
+(`Capabilities.isKosmicKrisp`, not the broader `isZink` — this does not affect Zink on
+Linux/RADV/ANV/NVK) `SSAOMode.AUTO` is forced to BASIC, with a log line explaining why.
+Explicit user overrides to BETTER/BEST are not gated.
+
+### Performance notes
+
+Four fixes took this from a few FPS to usable; if you are reproducing the setup, all four
+matter. Each was measured with `sample`, not guessed:
+
+| Fix | Where | Effect |
+|---|---|---|
+| 16-bit occlusion-cull indices | `MDICSectionRenderer`, `SharedIndexBuffer`, `prep.comp` | `u_vbuf` mid-draw stall: 100% → 0.09% of main-thread samples |
+| Upstream Mesa 26.3 (not the old fork base) | see build section | `mtl_new_heap` 1675 → 0, `kk_upload_descriptor_root` 1887 → 3, `vk_cmd_queue_execute` 2459 → 0 |
+| Don't poll the fence just created | `UploadStream`, `DownloadStream` | targets `_mesa_GetSynciv`, previously 907/2657 main-thread samples |
+| Keep `voxy-config.json` at stock defaults | `run/config/` | a detuned `section_render_distance` (3.875 vs 16) and `service_threads` (1 vs 8) stop distant LOD layers rendering at all |
+
+The Mesa upgrade is the big one for the driver side: the fork's base predated upstream
+`b8f0fe6bdca` ("kk: Allocate temporary command memory from pool"), so KosmicKrisp was creating a
+whole `MTLHeap` per draw call to hold that draw's descriptor root, plus
+`0cd84d45c60` ("kk: Record command buffers live and replay only on resubmit"), which removes the
+command-replay pass on every submit.
 
 ## Prerequisites
 
@@ -81,13 +102,31 @@ gated and will hit the hang.
 
 ## Building Mesa (Zink + KosmicKrisp)
 
-This uses a fork with KosmicKrisp/Zink-on-macOS support
-(`lucamignatti/mesa`, Mesa 26.1.0-devel at the time this was built), not upstream Mesa.
+**Build from upstream Mesa, not the fork.** Upstream now has native macOS platform support
+(`with_platform_macos`, Metal WSI in `platform_surfaceless.c`) plus months of KosmicKrisp
+performance work the fork predates — see the performance notes above. Two pieces still have to
+come from the fork on top of upstream:
+
+- **`src/glwrapper/`** — builds `libGL.dylib` (which LWJGL `dlopen`s; upstream builds no libGL
+  for macOS) and `libgl_interpose.dylib`. It also sets `MESA_EGL_LIBRARY` / `MESA_VULKAN_LIBRARY`
+  by locating itself with `dladdr`, which is **required**: SIP strips `DYLD_LIBRARY_PATH` from
+  hardened processes, and the Java launcher is one.
+- **the EGL window-surface path** — upstream's macOS support covers Metal WSI for Vulkan but not
+  the CAMetalLayer EGL window surface GLFW needs. `platform_surfaceless.c`, `eglapi.c` and
+  `zink_kopper.h` can be taken from the fork wholesale (upstream has not touched them since the
+  fork's base); `zink_kopper.c`, `kopper.c` and `zink_screen.c` need a 3-way merge.
+
+The rebase is recorded on the `upstream-rebase` branch of the local `~/src/mesa` checkout; its
+commit message lists exactly what was carried and what was dropped as obsolete. Reproduce with:
 
 ```bash
 mkdir -p ~/src && cd ~/src
 git clone https://github.com/lucamignatti/mesa.git
 cd mesa
+git remote add upstream https://gitlab.freedesktop.org/mesa/mesa.git
+git fetch upstream main
+git checkout -b upstream-rebase upstream/main
+# then graft the two pieces above (see the upstream-rebase commit for the exact file list)
 
 cat > native.ini <<'EOF'
 [binaries]
@@ -253,18 +292,33 @@ the same set the `zinkRun` block injects for the game itself.
   replacement for the F3 debug overlay in a headless/scripted session — grep the log for
   `RenderStatistics` to see `hierarchicalTraversalCounts`/`hierarchicalRenderSections`/
   `visibleSections`/`quadCount` per layer.
-- **Detecting the freeze (jstack-on-freeze pattern):** because the known KosmicKrisp hang (see
-  Status) produces no exception and no crash report, "no error in the log" does not mean the
-  session is healthy — a frozen render thread trivially produces zero new errors too. To confirm
-  a genuine hang rather than a slow frame: find the client PID (`ps aux | grep java`), then take
-  several `jstack <pid>` samples a few seconds apart and compare the render thread's stack and
-  reported CPU time. If the stack frame and `cpu=` value are *identical* across samples spanning
-  10+ seconds, the thread is not making progress — it's a real hang, not a coincidentally slow or
-  hot loop. All observed hangs (fixed and unfixed) have shown this exact signature, most recently
-  at `GlFence.<init>`/`GlFence.signaled` inside `glFenceSync`/`glGetSynciv`. If you hit this, there
-  is currently no code-level workaround; kill the process (`kill`, then `kill -9` if needed, then
-  a `pkill -f runClient` sweep) and check `ps aux` afterward to confirm no stray `java` processes
-  remain.
+- **Profiling and hang diagnosis — use `sample`, never `jstack`.** This is the single most
+  important lesson from the earlier investigation. Mesa executes GL on its own native worker
+  threads (`gl0` for glthread, `zfq0` for zink's flush queue). Neither is attached to the JVM, so
+  `jstack` cannot see them: every Java stack truncates at
+  `org.lwjgl.opengl.*.nglXxx(Native Method)`, which tells you only which GL call the render
+  thread is parked in — almost always a glthread sync point, and almost never where the real work
+  is stuck. A day was lost to that.
+
+  ```bash
+  # match the actual java binary, not your own shell (pgrep -f matches its own command line)
+  PID=$(ps -Ao pid,args | awk '/bin\/java/ && /devlaunchinjector/ {print $1; exit}')
+  /usr/bin/sample "$PID" 10 -f /tmp/voxy-sample.txt
+  grep -oE "(zink_[a-z_]+|kk_[a-z_]+|mtl_[a-z_]+|_mesa_[a-zA-Z_]+)" /tmp/voxy-sample.txt \
+    | sort | uniq -c | sort -rn | head -15
+  ```
+
+  Sanity-check the capture before trusting it: a real one is hundreds of KB to megabytes and
+  contains Mesa symbols. A tiny file, or zero counts for symbols you know should appear, means
+  you sampled the wrong process.
+
+- **Capture stderr.** Always launch through `2>&1 | tee /tmp/<name>.log`. Mesa's `mesa_loge` and
+  the glwrapper's diagnostics go to stderr, which log4j never sees.
+
+- **Time-to-freeze was a random variable** (18s to >154s) back when freezes happened. Any
+  before/after comparison needs n≥5 runs per arm and a median; single-run comparisons from the
+  old investigation are uninterpretable, and its claims that specific fixes "extended session
+  survival" were never actually supported.
 - **Where crash reports land:** native JVM crashes (e.g. the MoltenVK `SIGSEGV`) write
   `hs_err_pid<pid>.log` to the client's working directory,
   `versions/1.21.1-fabric/run/hs_err_pid<pid>.log`. Java-level crashes (mod/vanilla exceptions
