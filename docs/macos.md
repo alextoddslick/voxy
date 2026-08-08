@@ -314,15 +314,27 @@ The stack is
 which is **not** the `u_vbuf`/`batch_usage_wait` hang fixed by the 16-bit index change described
 above — it is a separate, unresolved problem. The stall begins before any memory pressure appears,
 so it is not an out-of-memory artifact, though note that a dev client of this size is the kernel's
-first jetsam target if you run it on a loaded machine. A separate, earlier confounded run (heavy
-system memory pressure, screen locked) showed a solid-black window instead of a frozen frame at
-the same stall stack — the two visual symptoms differ and neither should be assumed to generalize
-to the other; both are recorded here rather than smoothed into one story.
+first jetsam target if you run it on a loaded machine. A separate run at the same stall stack
+(`task-3-report.md`'s Attempt 3) produced a solid-black window instead of a frozen frame — **with
+the screen confirmed unlocked and actively in use**, which rules out screen-lock as the
+explanation for that symptom and makes it the more alarming of the two data points, not a
+discountable one. The only low-memory reading from that run is timestamped roughly 80 seconds
+after its screenshot, so memory pressure at the moment the window went black is not established
+either. The two visual outcomes (frozen last-good-frame here vs. solid black there) differ and
+neither should be assumed to generalize to the other; both are recorded here rather than smoothed
+into one story.
 
-This is worth an investigation of its own. Nothing here suggests the companion mod is at fault
-rather than Zink/KosmicKrisp — the natural next step is to find which GL call the ingest path makes
+This is worth an investigation of its own. Both arms of the A/B independently show a macOS GPU
+firmware-detected-lockup event (`gpuEvent-java-*.ips`, `restart_reason_desc:
+"firmware-detected lockup"`) at or immediately after world join — Voxy alone recovers cleanly from
+two such events and keeps rendering, while the paired run's only such event, 3 seconds after join,
+coincides almost exactly with the onset of the permanent stall. That correlation doesn't prove
+causation, but it points at a sharper next question than a vague "something about worldgen breaks
+rendering": does `voxyworldgenv2` leave a GPU fence outstanding across that lockup/restart boundary
 that the Voxy-alone path does not, since `rawIngest` runs on the client and touches Voxy's LOD
-store while the render thread is drawing from it.
+store while the render thread is drawing from it. Nothing here suggests the companion mod is at
+fault rather than Zink/KosmicKrisp generally — this looks like it lives inside the platform's own
+GPU-recovery path.
 
 Build the mod in its own checkout, then launch this client with `-Pworldgen`:
 
