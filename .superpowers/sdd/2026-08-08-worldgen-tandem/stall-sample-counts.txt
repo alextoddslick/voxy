@@ -1,0 +1,21 @@
+kk_timeline_wait sample counts (sample -f, 1ms interval)
+Extracted by controller from the raw sample captures, which live in /tmp and are not durable.
+
+--- /tmp/tandem-sample.txt  (Analysis of sampling java (pid 31409) every 1 millisecond)
++                                                                                           1879 kk_timeline_wait  (in libvulkan_kosmickrisp.dylib) + 112  [0x166012fa4]
+
+--- /tmp/tandem-sample2.txt  (Analysis of sampling java (pid 31409) every 1 millisecond)
++                                                                                           1898 kk_timeline_wait  (in libvulkan_kosmickrisp.dylib) + 112  [0x166012fa4]
+
+--- /tmp/tandem-sample3.txt  (Analysis of sampling java (pid 33146) every 1 millisecond)
++                                                                                           1842 kk_timeline_wait  (in libvulkan_kosmickrisp.dylib) + 112  [0x13ed22fa4]
+
+--- /tmp/ab-armA-sample-1.txt  (Analysis of sampling java (pid 33718) every 1 millisecond)
++ !                                                         :                           1 kk_timeline_wait  (in libvulkan_kosmickrisp.dylib) + 112  [0x13dd22fa4]
+
+--- /tmp/ab-armA-sample-2.txt  (Analysis of sampling java (pid 33718) every 1 millisecond)
++ !                                                         :         |       +       1 kk_timeline_wait  (in libvulkan_kosmickrisp.dylib) + 112  [0x13dd22fa4]
++ !                                                         :         |                 1 kk_timeline_wait  (in libvulkan_kosmickrisp.dylib) + 112  [0x13dd22fa4]
+
+--- /tmp/ab-armA-sample-3.txt  (Analysis of sampling java (pid 33718) every 1 millisecond)
+
