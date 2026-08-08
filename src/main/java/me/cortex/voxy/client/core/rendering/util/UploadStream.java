@@ -142,12 +142,17 @@ public class UploadStream {
             this.commit();
         }
 
+        //Only frames that already existed can possibly have signaled. The fence added just below
+        //was created microseconds ago, so polling it always fails - and on Zink the first poll of
+        //a not-yet-submitted fence forces a real batch submit, i.e. a wasted flush every frame.
+        int drainable = this.frames.size();
+
         if (!this.thisFrameAllocations.isEmpty()) {
             this.frames.add(new UploadFrame(new GlFence(), new LongArrayList(this.thisFrameAllocations)));
             this.thisFrameAllocations.clear();
         }
 
-        while (!this.frames.isEmpty()) {
+        while (drainable-- > 0 && !this.frames.isEmpty()) {
             //Since the ordering of frames is the ordering of the gl commands if we encounter an unsignaled fence
             // all the other fences should also be unsignaled
             if (!this.frames.peek().fence.signaled()) {

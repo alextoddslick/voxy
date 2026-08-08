@@ -122,13 +122,17 @@ public class DownloadStream {
 
     public void tick() {
         this.commit();
+        //See UploadStream.tick: don't poll the fence created below, it can never be signaled yet
+        //and on Zink the first poll of a not-yet-submitted fence forces a batch submit.
+        int drainable = this.frames.size();
+
         if (!this.thisFrameAllocations.isEmpty()) {
             this.frames.add(new DownloadFrame(new GlFence(), new LongArrayList(this.thisFrameAllocations), new ArrayList<>(this.thisFrameDownloadList)));
             this.thisFrameAllocations.clear();
             this.thisFrameDownloadList.clear();
         }
 
-        while (!this.frames.isEmpty()) {
+        while (drainable-- > 0 && !this.frames.isEmpty()) {
             //Since the ordering of frames is the ordering of the gl commands if we encounter an unsignaled fence
             // all the other fences should also be unsignaled
             if (!this.frames.peek().fence.signaled()) {
