@@ -8,6 +8,16 @@ differs from what the brief predicted (`enabled: true` vs. the predicted
 It does not block the checkpoint per the brief's own tie-breaker ("only
 `raw: true` decides the checkpoint").
 
+**See "Fix Round 1" at the bottom of this file.** Two Important review
+findings corrected framing/omissions below without altering the original
+observations: (1) the `enabled: true` anomaly in Step 6 is now resolved —
+it's the correct, healthy value, not an open mystery — per source at
+`VoxelIngestService.java:195` and commit `20cf2b06`; (2) Step 7's "shut down
+cleanly" omitted a literal `BUILD FAILED` / exit-143 in the log, which is
+benign (SIGTERM from `pkill`) but should have been disclosed. Read Steps 6
+and 7 below as the historical record of what was observed and reasoned at
+the time, and Fix Round 1 as the corrected/completed account.
+
 Log: `/tmp/tandem-load.log` from the run started 2026-08-08 15:35 (gitignored,
 not committed). Client PID launched via `run-zink-client.sh -Pworldgen
 -PquickPlayWorld="New World"`, shut down cleanly afterward (no new
@@ -136,6 +146,12 @@ a stop since `raw` is `true`. Reported here rather than diagnosed further,
 per the "do not attempt a fix" instruction — this task's scope is launch
 verification, not investigating why `enabled` differs from prediction.
 
+> **[Superseded — see "Fix Round 1 § Finding 1" at the bottom of this
+> file.]** The "third outcome"/open-mystery framing above is resolved:
+> `enabled: true` is the correct, healthy value, confirmed against Voxy's
+> source. Kept above verbatim as the historical record of what was observed
+> and reasoned at commit time.
+
 ## Step 7: Shut the client down
 
 ```
@@ -184,6 +200,12 @@ No new crash artifacts from this run — everything in
 `versions/1.21.1-fabric/run/crash-reports/` and the `hs_err_pid*.log` files
 in `versions/1.21.1-fabric/run/` are dated Aug 5, before this run (Aug 8).
 
+> **[Incomplete — see "Fix Round 1 § Finding 2" at the bottom of this
+> file.]** "Shut down cleanly" above was checked only in the narrow sense
+> that no *new* crash-report/hs_err files appeared. It omitted a literal
+> `BUILD FAILED` in the log tail, which is disclosed and explained (benign)
+> in Fix Round 1.
+
 ## Anything else unexpected in the log
 
 None of the following blocked either checkpoint; noted for completeness per
@@ -217,3 +239,150 @@ the brief's "anything unexpected" instruction:
 
 `versions/1.21.1-fabric/run/config/voxyworldgenv2.json` was created at stock
 defaults, ready for Task 3.
+
+---
+
+## Fix Round 1 (review response)
+
+Two Important findings and one Minor finding came back from review of this
+report. No client was re-run for this round — everything below is drawn
+from the same `/tmp/tandem-load.log` already captured (still present on
+disk, untouched since Step 7). Steps 6 and 7 above are left as originally
+written, marked with pointers to this section, per the reviewer's
+instruction to keep the original observation visible as history rather than
+silently rewriting it as though it were right the first time.
+
+### Finding 1 (Important): the Step 6 "unmodeled third outcome" is resolved — `enabled: true` is correct
+
+Step 6 above treated `enabled: true` as an open mystery ("a third outcome
+the brief didn't enumerate"). That framing is wrong and superseded.
+
+**Ground truth, verified directly in Voxy's source:**
+
+```
+$ sed -n '194,198p' src/main/java/me/cortex/voxy/common/world/service/VoxelIngestService.java
+    //Try to automatically ingest the chunk into the correct world
+    public static boolean tryAutoIngestChunk(LevelChunk chunk) {
+        return tryIngestChunk(WorldIdentifier.of(chunk.getLevel()), chunk);
+    }
+```
+
+`tryAutoIngestChunk(LevelChunk chunk)` is `public static` and takes exactly
+one argument — it is the one-argument ingest method `VoxyIntegration`
+probes for. So the probe succeeds and `enabled: true` is the correct,
+healthy value, not a coincidence or gap.
+
+The spec's original prediction of `enabled: false` traced to a grep pattern
+(`public .*Ingest(`) that required `Ingest` to be followed immediately by
+`(`. That matched `rawIngest(` but missed `tryAutoIngestChunk(` (the literal
+substring is `Ingest` followed by `Chunk`, not `(`), so the pattern never
+saw the real one-argument method and the spec concluded — wrongly — that no
+such method existed. This is corrected in commit `20cf2b06` ("docs: correct
+the 'integration gaps' claim - there are none" — verified present in this
+repo's history), which withdraws the "three known integration gaps" claim
+and everything that depended on it in
+`.superpowers/sdd/2026-08-08-worldgen-tandem/plans/2026-08-08-worldgen-tandem.md`
+and `.superpowers/sdd/2026-08-08-worldgen-tandem/specs/2026-08-08-worldgen-tandem-design.md`.
+
+**The one real consequence, for Task 3/4:** because `voxyEnabled: true` also
+resolved (i.e. `VoxyConfig.CONFIG` and `isRenderingEnabled()` were actually
+found via reflection, not stubbed out), `isVoxyRenderingEnabled()` genuinely
+consults Voxy's live config rather than short-circuiting to a constant. That
+means chunk generation reaching this path is gated on `enabled` /
+`enable_rendering` staying `true` in `voxy-config.json` — it is a real,
+live dependency, not a no-op. Anyone editing that config in Task 3 should
+keep this in mind.
+
+Checkpoint 2's result is unchanged (PASS) — only the reason is now
+correctly understood instead of an open question.
+
+### Finding 2 (Important): undisclosed `BUILD FAILED` at shutdown
+
+Step 7's "shut down cleanly" claim was true only in the narrow sense
+actually checked (no *new* `crash-reports/` or `hs_err_pid*.log` files). It
+omitted a literal `BUILD FAILED` sitting in the log tail, which the brief's
+"report anything unexpected" instruction exists to catch. Disclosing it now.
+
+Literal `tail -30 /tmp/tandem-load.log`, captured against the same log file
+(still present, unchanged since Step 7 — confirmed via `ls -la
+/tmp/tandem-load.log` showing the original Aug 8 15:36 mtime before this
+read):
+
+```
+[15:35:26] [Render thread/WARN] (Voxy) [me.cx.vy.ct.ce.gl.sr.Shader$Builder]: 0:451(40): warning: some implementations may not support implicit int -> uint conversions for `&' operators; consider casting explicitly for portability
+
+[15:35:26] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.VoxyRenderSystem]: Voxy render system created with 536870912 geometry capacity, using pipeline 'NormalRenderPipeline' with renderer 'MDICSectionRenderer'
+[15:35:26] [Render thread/INFO] (ChunkBuilder) Started 6 worker threads
+[15:35:26] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Dedicated voxy thread pool size: 2
+[15:35:26] [Render thread/INFO] (Minecraft) Loaded 2 advancements
+[15:35:26] [Render thread/INFO] (voxyworldgenv2) uploaded 0 known LOD regions for minecraft:overworld in 1 packet(s)
+[15:35:26] [Server thread/INFO] (voxyworldgenv2) Player24 reports 0 known chunks in minecraft:overworld; skipping re-send
+[15:35:35] [Async Node Manager/WARN] (Voxy) [me.cx.vy.ct.ce.rg.hl.NodeManager]: Tried processing a node that already has a request in flight: 2127 pos: 1@[2, 0, 4] ignoring
+[15:35:45] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 208 done @ 22.4/s, 12544 remaining in radius (~9m 20s), 0 active, 16 skipped, 0 failed
+[15:35:55] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 240 done @ 3.2/s, 12512 remaining in radius (~65m 10s), 0 active, 16 skipped, 0 failed
+[15:36:05] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 272 done @ 3.2/s, 12480 remaining in radius (~65m 00s), 0 active, 16 skipped, 0 failed
+WARN StatusConsoleListener Unable to register Log4j shutdown hook because JVM is shutting down. Using SimpleLogger
+
+> Task :1.21.1-fabric:runClient FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':1.21.1-fabric:runClient'.
+> Process 'command '/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home/bin/java'' finished with non-zero exit value 143 (this value may indicate that the process was terminated with the SIGTERM signal)
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 1m 9s
+12 actionable tasks: 3 executed, 9 up-to-date
+```
+
+**Why this is benign:** Step 7's own shutdown command is
+`pkill -f devlaunchinjector`, which sends SIGTERM to the Gradle-forked JVM
+running the game. Gradle's `runClient` task observes its child process exit
+with a non-zero code — 143 = 128 + 15, where 15 is `SIGTERM`'s signal number
+— and reports the task, and therefore the whole build invocation, as
+`FAILED`. This is simply what killing a `runClient` process from the
+outside looks like from Gradle's perspective; there is no other way to end
+`runClient` (it's a long-running foreground game process, not something
+that exits on its own). It is not a build breakage, compile error, test
+failure, or crash — it postdates every checkpoint assertion. Steps 4-6's
+grep evidence is all timestamped `15:35:1x`-`15:35:2x`; the `BUILD FAILED`
+text appears only after the `15:36:05` generation-progress line, i.e. after
+`pkill` was sent in Step 7, well after every checkpoint had already been
+captured. Task 3 (and Task 4) will use this same `pkill`-based shutdown and
+should expect the identical `BUILD FAILED (exit 143)` signature at the end
+of their logs — it is not a regression when it appears there either.
+
+As a secondary observation surfaced by pasting the full tail (outside this
+task's scope, but visible in the same evidence and directly relevant to
+what Task 3/4 verify): server-side generation was already running by
+shutdown time —
+`generating [minecraft:overworld]: 272 done @ 3.2/s, 12480 remaining in
+radius (~65m 00s), 0 active, 16 skipped, 0 failed` — meaning the ingest path
+whose reflection bridge Finding 1 confirms was live and producing chunks
+during this same launch, ahead of Task 3's config work.
+
+### Minor: Step 3's literal `tail -30` output
+
+Step 3 above substituted curated excerpts for the literal `tail -30` output
+at the moment the Monitor wait condition fired. `/tmp/tandem-load.log`
+still exists (confirmed above), so here is the actual, unedited
+`tail -30 /tmp/tandem-load.log` output as captured for this fix round —
+this is the same command and file used for Finding 2 immediately above,
+since the log file kept accumulating lines (generation progress, then the
+`BUILD FAILED` block) all the way through Step 7's shutdown, so a `tail -30`
+run now necessarily reflects the end of the file's life, not the exact byte
+offset at the instant Step 3's wait condition fired. That earlier moment's
+evidence was not lost, though — it's the literal grep output already quoted
+in Step 3 and Step 4 above (`Loaded 1399 advancements`, `Player24 joined
+the game`, the mod-list `- voxyworldgenv2 2.2.4` line, etc.), all pulled
+directly from this same file with `grep`/`sed`, not paraphrased. This
+section corrects the specific claim of having pasted a literal `tail -30`
+in Step 3 when curated excerpts were pasted instead — it does not claim to
+recover the exact `tail -30` window from that earlier moment, since that
+window no longer exists as a `tail` of the (longer) file today.
