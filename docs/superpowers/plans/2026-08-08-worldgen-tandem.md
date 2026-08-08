@@ -269,9 +269,13 @@ Expected: no output. The mod's five mixins (`ChunkMapMixin`, `MinecraftServerMix
 grep "voxy integration initialized" /tmp/tandem-load.log
 ```
 
-Expected exactly: `voxy integration initialized (enabled: false, raw: true, voxyEnabled: true)`
+Expected exactly: `voxy integration initialized (enabled: true, raw: true, voxyEnabled: true)`
 
-**`raw: true` is the field that decides this checkpoint.** `enabled: false` is expected and correct — this Voxy backport's ingest method is `enqueueIngest(WorldEngine, LevelChunk)` (two arguments) while the mod probes for a one-argument variant, so its redundant server-side direct-ingest path stays disabled. `voxyEnabled: true` means it found `VoxyConfig.CONFIG` and `isRenderingEnabled()`.
+All three fields true. `raw: true` is the one the LOD network path depends on. `enabled: true` means
+the probe found `VoxelIngestService.tryAutoIngestChunk(LevelChunk)` (line 195, `public static`), so
+the server-side direct-ingest path is live too. `voxyEnabled: true` means it found
+`VoxyConfig.CONFIG` and `isRenderingEnabled()` — note this makes generation genuinely gated on
+Voxy's render state, so `enabled` and `enable_rendering` in `voxy-config.json` must stay true.
 
 If `raw: false`, STOP — the LOD path cannot work, and the reason will be in the following `voxy rawIngest is unavailable (...)` warning. Report it rather than guessing at a fix.
 
@@ -489,11 +493,12 @@ known to make LOD delivery look dead), and drop `generationRadius` from `64` to 
 testing — radius 64 is ~16.6k chunks on a machine already paying the Zink translation cost. Leave
 Voxy's own `voxy-config.json` at stock defaults.
 
-**Reading the logs.** `voxy integration initialized (enabled: false, raw: true, voxyEnabled: true)`
-is the healthy line: `raw: true` is what matters, and `enabled: false` is expected — the mod probes
-for a one-argument ingest method, while this backport's is `enqueueIngest(WorldEngine, LevelChunk)`,
-so its redundant server-side direct-ingest path stays off and its tab-list HUD reports
-"voxy: disabled" even while ingest works. Generation progress logs every 10 s as
+**Reading the logs.** `voxy integration initialized (enabled: true, raw: true, voxyEnabled: true)`
+is the healthy line — all three fields true. `raw: true` carries the LOD network path,
+`enabled: true` means the direct-ingest path resolved too, and `voxyEnabled: true` means the mod can
+read Voxy's render state, which it uses to decide whether to generate at all: if `enabled` or
+`enable_rendering` is false in `voxy-config.json`, the worker idles by design.
+Generation progress logs every 10 s as
 `generating [minecraft:overworld]: N done @ X/s, ...`. Delivery is confirmed by non-empty
 `.bin` files under `run/voxyworldgenv2/lodmemory/`, which are written only for columns Voxy's
 `rawIngest` fully accepted, and by non-zero `quadCount` at LOD layer 1 or beyond in the
@@ -525,5 +530,6 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 All four spec checkpoints have passed with pasted log evidence in the task reports, `docs/macos.md`
 documents the pairing, and `JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew :1.21.1-fabric:build`
-succeeds. Then hand back to the user with the three known integration gaps from the spec restated as
-findings — they are reported, not fixed.
+succeeds. Then hand back to the user, noting that the spec's original "three known integration gaps"
+turned out to be a false alarm from a bad grep — see the correction in the spec's Integration
+surface section. There are no gaps to report.

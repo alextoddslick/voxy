@@ -105,29 +105,32 @@ Four checkpoints, each with its own log evidence, so a failure localises to one 
 | Stage | Evidence |
 |---|---|
 | Both mods load | `voxyworldgenv2` in the loader's mod list; all five mixins apply; client reaches the title screen |
-| Integration resolves | `voxy integration initialized (enabled: false, raw: true, voxyEnabled: true)`. **`raw: true` is the field that matters** — `enabled: false` is expected here, not a failure; see Known integration gaps below. |
+| Integration resolves | `voxy integration initialized (enabled: true, raw: true, voxyEnabled: true)` — all three true; `raw: true` is the field the LOD path depends on. See Integration surface below. |
 | Generation runs | `logProgress` lines (10 s interval): dimension, chunks done, chunks/s, remaining-in-radius with ETA |
 | Ingest and render | `LodMemory` records columns under `run/voxyworldgenv2/lodmemory/<worldkey>/`, and `-PvoxyDebugStats` shows `quadCount` / `hierarchicalRenderSections` non-zero and growing on LOD layers beyond layer 0 |
 
 Per `docs/macos.md`: capture stderr (`2>&1 | tee`), and use `sample`, never `jstack`, if anything
 hangs.
 
-## Known integration gaps
+## Integration surface
 
-Found by reading `VoxyIntegration.java` against this Voxy backport. All three follow from one
-cause: the probe looks for a single-argument ingest method (`ingestChunk`, `tryAutoIngestChunk`,
-`enqueueIngest`, or `ingest` taking only `LevelChunk`) and an `INSTANCE` field on
-`VoxelIngestService`. This backport has neither — its method is `enqueueIngest(WorldEngine,
-LevelChunk)`, two arguments — so `VoxyIntegration.enabled` stays `false`. Consequences:
+> **Correction (2026-08-08, during Task 2).** An earlier revision of this section claimed three
+> integration gaps, all derived from the premise that `VoxyIntegration.enabled` would stay `false`
+> because this backport has no single-argument ingest method. **That premise was wrong.**
+> `VoxelIngestService.tryAutoIngestChunk(LevelChunk)` exists at line 195 — `public static`, exactly
+> the one-argument shape the probe looks for. The claim came from a grep whose pattern
+> (`public .*Ingest(`) required `Ingest` to be immediately followed by `(`, so it matched
+> `rawIngest(` and missed `tryAutoIngestChunk(`. The live run confirms the truth:
+> `voxy integration initialized (enabled: true, raw: true, voxyEnabled: true)`.
+>
+> There are no integration gaps. `isVoxyAvailable()` returns true so the tab-list HUD reports
+> "voxy: enabled" correctly; `ingestChunk()` resolves so the server-side direct-ingest path is live
+> alongside the network path; and `isVoxyRenderingEnabled()` genuinely consults
+> `VoxyConfig.CONFIG.isRenderingEnabled()` rather than short-circuiting. That last one has a
+> practical consequence for testing: generation really is gated on Voxy's render state, so
+> `enabled`/`enable_rendering` in `voxy-config.json` must stay true or the worker will idle.
 
-1. `isVoxyAvailable()` returns false, so `DebugRenderer`'s tab-list HUD reports **"voxy: disabled"**
-   even while ingest is working. Cosmetic, but actively misleading during this test.
-2. `ingestChunk()` is a silent no-op, so the server-side direct-ingest path never fires. Redundant
-   in singleplayer, where the network path does the real work.
-3. `isVoxyRenderingEnabled()` short-circuits to `true` before consulting Voxy, so generation is
-   never gated on Voxy's actual render state. Harmless — arguably helpful — for this test.
-
-None blocks the loop. The path that matters was verified to line up exactly:
+Every reflected member lines up:
 
 | Reflected member | Present in this Voxy |
 |---|---|
