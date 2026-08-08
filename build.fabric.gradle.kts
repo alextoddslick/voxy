@@ -285,6 +285,44 @@ dependencies {
     modCompileOnly("maven.modrinth:vivecraft:$viveFabric")
     modCompileOnly("maven.modrinth:flashback:${prop("deps.flashback")}")
 
+    // Optional dev-runtime pairing with Voxy World Gen V2, the companion mod that background-
+    // generates chunks and streams LOD data into Voxy's ingest service. Off unless -Pworldgen is
+    // passed, so ordinary builds and CI are untouched. That mod is one universal jar
+    // (environment "*", main + client entrypoints), so this single copy serves both the
+    // integrated server and the client in singleplayer - which also means there is no
+    // client/server protocol-version mismatch to worry about here.
+    // See docs/superpowers/specs/2026-08-08-worldgen-tandem-design.md.
+    // Usage: ./scripts/macos/run-zink-client.sh -Pworldgen
+    if (project.hasProperty("worldgen")) {
+        val worldgenLibs = file("$rootDir/../voxy_worldgen_v2/build/libs")
+        val explicitJar = project.findProperty("worldgenJar") as String?
+        val worldgenJar = if (explicitJar != null) {
+            file(explicitJar)
+        } else {
+            worldgenLibs.listFiles()
+                ?.filter {
+                    it.name.startsWith("Voxy World Gen V2-1.21.1-") &&
+                        it.name.endsWith(".jar") &&
+                        !it.name.endsWith("-sources.jar")
+                }
+                ?.maxByOrNull { it.lastModified() }
+                ?: throw GradleException(
+                    "-Pworldgen: no Voxy World Gen V2 jar found in $worldgenLibs. Build it there " +
+                        "with `JAVA_HOME=\$(/usr/libexec/java_home -v 21) ./gradlew build`, or " +
+                        "point at one with -PworldgenJar=<absolute path>.")
+        }
+        if (!worldgenJar.exists()) {
+            throw GradleException("-PworldgenJar=$worldgenJar does not exist")
+        }
+        logger.lifecycle("worldgen: adding ${worldgenJar.name} to the client dev runtime")
+        modRuntimeOnly(files(worldgenJar))
+        // Cloth Config is NOT declared in that mod's fabric.mod.json, so the mod loads happily
+        // without it and then throws NoClassDefFoundError the moment its config screen is opened -
+        // integration/ModMenuIntegration is the only class importing me.shedaniel.clothconfig2.
+        // maven.shedaniel.me is already configured in settings.gradle.kts.
+        modRuntimeOnly("me.shedaniel.cloth:cloth-config-fabric:15.0.140")
+    }
+
     implementation(platform("org.lwjgl:lwjgl-bom:$lwjglVersion"))
     implementation("org.lwjgl:lwjgl")
     implementation("org.lwjgl:lwjgl-lmdb:$lwjglVersion")
