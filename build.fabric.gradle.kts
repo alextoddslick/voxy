@@ -106,7 +106,11 @@ loom {
     // DYLD_*/MESA_*/VK_* env vars directly into the "client" run config via the Loom DSL.
     if (project.hasProperty("zinkRun")) {
         val home = System.getProperty("user.home")
-        val mesa = "$home/mesa-native"
+        // Which Mesa install to run against. Defaults to ~/mesa-native; override with
+        // -PmesaDir=<path> (absolute, or relative to $HOME) to A/B a second build without
+        // disturbing a known-good install. Usage: -PmesaDir=mesa-next
+        val mesaDirProp = (project.findProperty("mesaDir") as String?) ?: "mesa-native"
+        val mesa = if (mesaDirProp.startsWith("/")) mesaDirProp else "$home/$mesaDirProp"
         val glfwLib = "$home/src/glfw/build/src/libglfw.3.dylib"
         val interposeLib = file("$mesa/lib/libgl_interpose.dylib")
 
@@ -138,6 +142,9 @@ loom {
                 // channel crashes the loader itself rather than degrading gracefully. Left out.
                 if (project.hasProperty("mesaDebug")) {
                     environmentVariable("MESA_DEBUG", "1")
+                    // EGL's own loader logging - the only way to see *why* driver/screen
+                    // creation failed ("failed to create dri2 screen" on its own says nothing).
+                    environmentVariable("EGL_LOG_LEVEL", "debug")
                 }
                 if (interposeLib.exists()) {
                     environmentVariable("DYLD_INSERT_LIBRARIES", interposeLib.absolutePath)
