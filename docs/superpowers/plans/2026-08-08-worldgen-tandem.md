@@ -462,6 +462,13 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 Insert before `## Debugging` in `docs/macos.md` (the outer fence below is four backticks so the
 inner ` ```bash ` block survives copy/paste — do not copy the outer fence itself):
 
+> **Plan amended 2026-08-08 after Tasks 3 and 3b.** The section originally drafted here described a
+> working pairing. It does not work: the mods coexist and generation is flawless, but loading
+> `voxyworldgenv2` pins Voxy's render thread in a GPU fence wait and the client stops drawing. The
+> replacement text below documents that outcome. Do not restore the original optimistic wording, and
+> do not soften the status line — the point of this section is that someone reaching for this pairing
+> on macOS learns it is not usable yet, and gets the evidence to continue the investigation.
+
 ````markdown
 ## Running with Voxy World Gen V2
 
@@ -470,6 +477,30 @@ streams LOD data into Voxy's ingest service. Its 1.21.1 backport lives on the `b
 branch of `alextoddslick/voxy_worldgen_v2` and pairs with this Voxy build. Until the Zink work
 above, the pairing could only be tested from a Windows client, because macOS caps native OpenGL at
 4.1 and Voxy needs 4.3+.
+
+**Status: the pairing does not render on macOS today.** The two mods load and coexist cleanly, and
+background generation works perfectly — 480 chunks with zero failures across repeated runs. But with
+`voxyworldgenv2` loaded, Voxy's render thread locks in a GPU fence wait roughly 13 seconds after
+world join and the client stops drawing frames.
+
+The stall was isolated with a same-session A/B, both arms on the same world for the same duration:
+
+| Arm | `kk_timeline_wait` samples | `RenderStatistics` lines | Window |
+|---|---|---|---|
+| Voxy alone | 1 (an ordinary transient fence wait) | 55, live terrain, layer-1 `quadCount=11511` | renders normally |
+| Voxy + `voxyworldgenv2` | ~1650–1900, i.e. the render thread pinned | 1, all zeros, then nothing for 4 minutes | frozen / black |
+
+The stack is
+`kk_timeline_wait -> -[IOSurfaceSharedEvent waitUntilSignaledValue:timeoutMS:] -> iokit_user_client_trap`,
+which is **not** the `u_vbuf`/`batch_usage_wait` hang fixed by the 16-bit index change described
+above — it is a separate, unresolved problem. The stall begins before any memory pressure appears,
+so it is not an out-of-memory artifact, though note that a dev client of this size is the kernel's
+first jetsam target if you run it on a loaded machine.
+
+This is worth an investigation of its own. Nothing here suggests the companion mod is at fault
+rather than Zink/KosmicKrisp — the natural next step is to find which GL call the ingest path makes
+that the Voxy-alone path does not, since `rawIngest` runs on the client and touches Voxy's LOD
+store while the render thread is drawing from it.
 
 Build the mod in its own checkout, then launch this client with `-Pworldgen`:
 
@@ -499,13 +530,23 @@ is the healthy line — all three fields true. `raw: true` carries the LOD netwo
 read Voxy's render state, which it uses to decide whether to generate at all: if `enabled` or
 `enable_rendering` is false in `voxy-config.json`, the worker idles by design.
 Generation progress logs every 10 s as
-`generating [minecraft:overworld]: N done @ X/s, ...`. Delivery is confirmed by non-empty
-`.bin` files under `run/voxyworldgenv2/lodmemory/`, which are written only for columns Voxy's
-`rawIngest` fully accepted, and by non-zero `quadCount` at LOD layer 1 or beyond in the
-`RenderStatistics` lines that `-PvoxyDebugStats` emits.
+`generating [minecraft:overworld]: N done @ X/s, ...`.
+
+Delivery into Voxy is confirmed by non-empty `.bin` files under `run/voxyworldgenv2/lodmemory/`,
+which are written only for columns Voxy's `rawIngest` fully accepted. Two cautions if you try to
+verify this yourself. First, `LodMemory.flush()` only runs from `tick()` (30 s debounce) or a
+graceful `onDisconnect()`, so a client killed with `pkill` writes nothing and leaves a stale file
+from an earlier session — check the mtime before trusting it. Second, **non-zero `quadCount` at LOD
+layer 1 or beyond does not prove worldgen ingest**: Voxy's LOD store is also filled by its own
+ingest of normally-loaded chunks and persists across runs, and the Voxy-alone control arm above
+shows healthy layer-1 values with the companion mod absent entirely.
 ````
 
-Replace the illustrative numbers with the real ones from Task 3's report where they differ.
+Also amend the **Status** section near the top of `docs/macos.md`: its "Multi-minute sessions run
+without hanging" claim is now true only of Voxy alone. Scope it to say so and point at this section.
+
+Use the real observed numbers from `task-3-report.md` and `task-3b-report.md` throughout — do not
+carry over any illustrative figure from this plan that the reports contradict.
 
 - [ ] **Step 2: Verify the build still passes**
 
@@ -530,6 +571,8 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 All four spec checkpoints have passed with pasted log evidence in the task reports, `docs/macos.md`
 documents the pairing, and `JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew :1.21.1-fabric:build`
-succeeds. Then hand back to the user, noting that the spec's original "three known integration gaps"
+The plan is DONE when Tasks 1-4 are complete and the build passes. Note that checkpoint 4b FAILED
+and 4a is UNPROVEN - that is the honest outcome, documented rather than fixed. Fixing the render
+stall is explicitly a separate piece of work.
 turned out to be a false alarm from a bad grep — see the correction in the spec's Integration
 surface section. There are no gaps to report.
