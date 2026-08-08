@@ -3,7 +3,14 @@
 **Bottom line up front:** Checkpoint 3 (generation) is a clean PASS across all three launch
 attempts. Checkpoint 4a (LOD ingest) is a PASS **only under a heavy caveat**: the on-disk evidence
 is a stale artifact from Task 2, not fresh proof from tonight's runs — every attempt died before
-its own data could be flushed to disk. Checkpoint 4b (distant LOD render) is a **FAIL**: one
+its own data could be flushed to disk.
+
+> **[Superseded — see "Fix Round 1 § Finding 1" at the bottom of this file.]** Checkpoint 4a's
+> verdict is corrected to **UNPROVEN**, not "PASS, heavily caveated." Three attempts produced zero
+> fresh on-disk ingest bytes tonight, so the checkpoint was never actually exercised, not weakly
+> passed. Kept above verbatim as the historical record of the original call.
+
+Checkpoint 4b (distant LOD render) is a **FAIL**: one
 attempt produced a single non-zero distant-layer log line, but the mandatory visual check (Step 8)
 caught exactly the failure mode it exists to catch — the actual window was solid black at that
 moment despite the non-zero counters. This required three launch attempts, two of which were
@@ -264,6 +271,10 @@ resolution in this task's instructions, layer index 1 (not just layer 0) is genu
 satisfies checkpoint 4b's stated pass condition. **But there is no third line** — I never observed
 growth across successive lines, only a single before/after pair, because:
 
+> **[See "Fix Round 1 § Finding 3" at the bottom of this file.]** This is the freshest in-session
+> data point from tonight, and I originally failed to cross-reference it against checkpoint 4a at
+> all. It turns out it would not have helped checkpoint 4a even if I had — see Finding 3 for why.
+
 Generation caught up normally in the background:
 
 ```
@@ -386,6 +397,13 @@ across all three attempts, alongside consistent, successful `generation caught u
 the letter of the check, with a hard caveat**: it is not fresh proof from tonight's radius-16/
 unthrottled configuration, only from Task 2's session.
 
+> **[Superseded — see "Fix Round 1 § Finding 1" and "§ Finding 2" at the bottom of this file.]**
+> Two problems with the paragraph above: (1) the "pass on the letter, with a caveat" framing is
+> wrong — the checkpoint was never exercised tonight, so the correct verdict is UNPROVEN, not a
+> caveated pass; (2) "on every launch" for the `voxy ingester initialized successfully (reflective)`
+> line was asserted without pasting the actual log output. Both corrected below. Kept above verbatim
+> as the historical record of the original call.
+
 ## Checkpoint verdicts
 
 **Checkpoint 3 (generation is running): PASS.** All three attempts show clean `generating [...]`
@@ -405,6 +423,11 @@ of any `rawIngest is unavailable` warning across three attempts, plus consistent
 generation-catch-up cycles through the same reflective ingester, is corroborating-but-indirect
 evidence that the pathway itself still works; it is not the direct, fresh proof the checkpoint asks
 for.
+
+> **[Superseded — see "Fix Round 1 § Finding 1" at the bottom of this file.]** Corrected verdict:
+> **UNPROVEN**, not "PASS, heavily caveated." No fresh on-disk ingest bytes were produced in any of
+> the three attempts, so this checkpoint was not exercised tonight — see Fix Round 1 for the full
+> reasoning. Kept above verbatim as the historical record of the original call.
 
 **Checkpoint 4b (distant LOD terrain rendering): FAIL.** One single log line (Attempt 3, 16:12:18)
 showed genuinely non-zero values at LOD layer index 1 (`hierarchicalRenderSections[1]=12`,
@@ -456,6 +479,10 @@ clean FAIL rather than rounding a single ambiguous data point up to a pass — t
 
 ## Recommendation
 
+> **[Superseded — see "Fix Round 1 § Finding 1" at the bottom of this file.]** "Indirectly 4a...
+> solid" overstates it — checkpoint 4a is UNPROVEN, not solid, per the correction below. Kept above
+> verbatim as the historical record of the original call.
+
 The generation → ingest pipeline (checkpoint 3, and indirectly 4a) is solid across three
 independent attempts. The render side (checkpoint 4b) needs a retest under conditions where (a) the
 Mac isn't under the kind of memory pressure that makes a ~5GB dev client the kernel's first jetsam
@@ -464,3 +491,118 @@ seconds rather than inferred after the fact. The GPU-fence-wait stack captured t
 even with the screen unlocked — looks like a real, reproducible issue in the Zink/KosmicKrisp swap
 path under this test's specific load pattern, separate from the previously-fixed indices bug, and is
 worth its own investigation.
+
+---
+
+## Fix Round 1 (review response)
+
+Three Important findings and one Minor came back from review. No client was re-run for this round
+— everything below is drawn from evidence already captured tonight (the surviving
+`/tmp/tandem-run-attempt1.log` and `/tmp/tandem-run-attempt3.log`, still present on disk unchanged,
+plus `task-2-report.md` and the sibling repo's `LodMemory.java`, all read-only). Every section above
+is left as originally written, marked with inline pointers to this section, per the convention this
+plan already established in `task-2-report.md`'s own Fix Round 1 — keeping the original observation
+visible as history rather than silently rewriting it as though it were right the first time.
+
+### Finding 1 (Important): checkpoint 4a corrected to UNPROVEN, not "PASS, heavily caveated"
+
+The reviewer is right and I was wrong to round this up to a caveated pass. Restating the mechanism
+I'd already found, now drawing the correct conclusion from it:
+
+`LodMemory.flush()` (`voxy_worldgen_v2/src/main/java/com/ethan/voxyworldgenv2/client/LodMemory.java`,
+read-only, not modified) only ever runs from two call sites: `tick()`, gated by a 30-second debounce
+against the client's per-tick loop, and `onDisconnect()`, which only fires on a *graceful*
+disconnect. All three of tonight's attempts ended in `SIGKILL` (exit 137) — a signal the JVM cannot
+intercept or run shutdown hooks against — so neither call site ever had a chance to run, in any
+attempt. There is no code path by which tonight's retuned run (`maxMbpsPerPlayer=0.0`,
+`generationRadius=16`) could have written a single fresh byte to `lodmemory/`, independent of how
+long any attempt survived.
+
+The `.bin` file's Aug 8 15:36 mtime is independently corroborated as Task 2's artifact, not
+tonight's, by `task-2-report.md` itself:
+
+```
+task-2-report.md:161: -rw-r--r--@ 1 alextodd  staff  432 Aug  8 15:35 versions/1.21.1-fabric/run/config/voxyworldgenv2.json
+task-2-report.md:170:   "generationRadius": 64,
+task-2-report.md:174:   "maxMbpsPerPlayer": 2.0,
+task-2-report.md:323: [15:36:05] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 272 done @ 3.2/s, 12480 remaining in radius (~65m 00s), 0 active, 16 skipped, 0 failed
+```
+
+Task 2's own config snapshot (15:35) shows the *old*, un-retuned values (`generationRadius: 64`,
+`maxMbpsPerPlayer: 2.0`), and Task 2's own log shows generation actively producing chunks at
+15:36:05 — the same minute as the `.bin` file's mtime. That file is Task 2's artifact, produced
+under the old config, full stop. Tonight's three attempts collectively produced **zero** fresh
+ingest bytes on disk.
+
+**Corrected verdict: checkpoint 4a is UNPROVEN.** Not "passed on the letter of the check" — the
+literal grep conditions being satisfied by a leftover file from a previous task's session is not the
+checkpoint being exercised; it's the checkpoint never having been given the chance to fail. "PASS,
+heavily caveated" implied I'd tested the thing and it mostly worked; the truth is I never tested it.
+This changes the BLUF and the "Checkpoint verdicts" section above (both marked with pointers to
+here) and the "Recommendation" section's "indirectly 4a... is solid" claim (also marked).
+
+### Finding 2 (Important): sourcing the "voxy ingester initialized successfully (reflective)" claim
+
+The reviewer is right that this was a bare assertion. It should not have been — I had the surviving
+logs the whole time and simply didn't check. Correcting that now:
+
+```
+$ grep -n "voxy ingester initialized" /tmp/tandem-run-attempt1.log /tmp/tandem-run-attempt3.log
+/tmp/tandem-run-attempt1.log:225:[15:53:21] [Server thread/INFO] (voxyworldgenv2) voxy ingester initialized successfully (reflective)
+/tmp/tandem-run-attempt3.log:226:[16:12:14] [Server thread/INFO] (voxyworldgenv2) voxy ingester initialized successfully (reflective)
+```
+
+The line is real and present, confirmed for **Attempts 1 and 3** — the two attempts whose logs
+survive. I cannot confirm it for **Attempt 2**: that log was overwritten before I saved a copy (see
+the original "procedural mistake" disclosure under Attempt 2 above), so "on every launch" in the
+original text overstated what I could actually check. The honest claim is "confirmed present in the
+two surviving logs (Attempts 1 and 3); not independently verifiable for Attempt 2."
+
+This line does not change the Finding 1 correction — it was never disk-persistence evidence, only a
+same-session log confirmation that the reflective ingester object itself constructed without error.
+It's real, sourced corroboration that the pathway initializes cleanly; it says nothing about whether
+any chunk's data actually reached disk, which Finding 1 already establishes it did not.
+
+### Finding 3 (Important): cross-referencing Attempt 3's fresh RenderStatistics data — and why it doesn't rescue checkpoint 4a
+
+I should have connected Attempt 3's 16:12:18 line (`hierarchicalRenderSections=[190, 12, 0, 0, 0]`,
+`quadCount=[80092, 10777, 0, 0, 0]`) to checkpoint 4a explicitly — it's the freshest in-session data
+point I have, and silently leaving it uncited in the 4a section while using it elsewhere (for 4b)
+was an oversight. Doing that now, with the correct conclusion:
+
+That data point does **not** demonstrate worldgen ingest happened tonight. Per the coordinator, a
+control-arm launch of Voxy *without* `-Pworldgen` also produced non-zero layer-1 values
+(`hierarchicalRenderSections=[162, 19, 0, 0, 0]`, `quadCount=[66280, 11511, 0, 0, 0]`) — meaning
+Voxy's own LOD store is populated by its normal chunk-loading ingest as well as by worldgen's
+`rawIngest`, and that store persists across runs regardless of which mod loaded it. Layer-1-and-beyond
+non-zero values, on their own, are consistent with *either* source and cannot be attributed to
+worldgen ingest without something that isolates the two paths (e.g., a scratch world Voxy has never
+touched, or a value that only worldgen's ingest could have produced). I don't have that isolation
+tonight, so this data point is neutral with respect to checkpoint 4a — it cannot be used to firm up
+the verdict in either direction. This reinforces, rather than weakens, the UNPROVEN call in
+Finding 1: I have no data tonight, fresh or stale, that specifically demonstrates worldgen's ingest
+path reaching Voxy.
+
+**Additional context from the coordinator, reported here for completeness but explicitly not used to
+draw a conclusion:** the coordinator compared my three `sample` captures' hit counts for
+`kk_timeline_wait` directly — 1879/1879 samples (Attempt 1, first capture), 1898/1898 (Attempt 1,
+second capture), and 1842/1842 (Attempt 3) — i.e. the render thread was pinned in that exact frame
+for effectively 100% of every 3-second sampling window, all three times. Their own control-arm
+`sample` (also without `-Pworldgen`) showed a count of 1, consistent with an ordinary, brief,
+resolving fence wait rather than a stall. The coordinator was explicit that this is not yet
+attributable: my three captures ran with the system at roughly 96MB free (per the Attempt 1
+JetsamEvent report already cited above), while their control ran at roughly 4GB free, so memory
+pressure itself is an open confound. A second control arm — with `-Pworldgen`, at high free memory —
+was reported as running at the time of this fix round, specifically to separate those two variables.
+I am not drawing an attribution conclusion here; I'm reporting the coordinator's own comparison of my
+data because it's directly relevant context, and noting explicitly that it is pending further
+evidence I did not generate and have not seen.
+
+### Minor: tension with `docs/macos.md`
+
+`docs/macos.md`'s Status section currently states, unqualified: "Multi-minute sessions run without
+hanging." Attempts 1 and 3 in this report directly sit in tension with that — both hung in an
+identical native stack, one surviving 12.5 minutes before an external SIGKILL, the other stalling
+after only two frames. I have not edited `docs/macos.md` — per this task's scope, that file belongs
+to Task 4. Flagging the tension here so Task 4 has it on record rather than discovering it cold.
+
