@@ -570,7 +570,7 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 ## Done When
 
 > **Amended 2026-08-08.** The original bar here was "all four checkpoints have passed." They did not:
-> checkpoint 3 passed, 4a is UNPROVEN, and 4b FAILED. That is the real result, and the plan closes by
+> checkpoint 3 passed, 4a passed but only once (delivery was demonstrated in Task 2's run, 15:36, and never reproduced), and 4b FAILED. That is the real result, and the plan closes by
 > documenting it rather than by pretending otherwise.
 
 Tasks 1-4 are complete, every checkpoint has a verdict backed by pasted evidence in the task reports,
