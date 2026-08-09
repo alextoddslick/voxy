@@ -155,3 +155,25 @@ where the fix is small and clearly within this scope — otherwise report and st
 
 All four verification checkpoints pass in one session, and
 `JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew :1.21.1-fabric:build` still succeeds.
+
+> **Correction (2026-08-08, after Tasks 3 and 3b).** They did not all pass in one session. The real
+> outcome, per `task-3-report.md`, `task-3b-report.md`, and `docs/macos.md`'s "Running with Voxy
+> World Gen V2" section:
+>
+> - **Checkpoint 3 (generation runs): PASS.** Clean `generating [...]`/`generation caught up` lines,
+>   0 failures, across every launch attempted.
+> - **Checkpoint 4a (LOD data reached Voxy ingest): PASS, demonstrated once.** Task 2's run (stock
+>   config, world join 15:35:26) wrote a non-empty `lodmemory/.../minecraft_overworld.bin` during
+>   its own lifetime via `LodMemory.tick()`'s debounce flush — direct proof `rawIngest` accepted at
+>   least one column that session. It was not reproduced in any later run: every subsequent attempt
+>   stalled in the render-thread fence wait before a tick-flush could fire and was then SIGKILLed
+>   before a shutdown flush could run either. One column-level success, once — not a robustly
+>   re-verified pathway. The build did succeed (Task 1's build.fabric.gradle.kts change), so that
+>   half of this line held.
+> - **Checkpoint 4b (distant LOD terrain rendering): FAIL.** The render thread locks in a GPU fence
+>   wait roughly 13 seconds after world join and the client stops drawing frames — isolated as
+>   specific to the pairing by the Task 3b A/B (Voxy alone never enters the stall; Voxy +
+>   `voxyworldgenv2` is in it within 13s every time).
+>
+> Fixing the stall is out of scope for this spec — see `docs/macos.md` for the full evidence and the
+> open next question. Do not read the unamended line above as the actual result.

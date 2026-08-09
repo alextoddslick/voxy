@@ -293,7 +293,13 @@ dependencies {
     // client/server protocol-version mismatch to worry about here.
     // See docs/superpowers/specs/2026-08-08-worldgen-tandem-design.md.
     // Usage: ./scripts/macos/run-zink-client.sh -Pworldgen
-    if (project.hasProperty("worldgen")) {
+    //
+    // Guarded to the 1.21.1-fabric subproject only: this buildscript (build.fabric.gradle.kts) is
+    // Stonecutter's shared script for every "*-fabric" subproject, including 1.20.1-fabric, and
+    // the companion mod is a 1.21.1-only jar. Without this guard, `-Pworldgen` on 1.20.1-fabric
+    // resolves this same configuration and Loom remaps both the jar and Cloth Config against
+    // 1.20.1 mappings for no reason - confirmed harmful, not just wasted work.
+    if (project.name == "1.21.1-fabric" && project.hasProperty("worldgen")) {
         val worldgenLibs = file("$rootDir/../voxy_worldgen_v2/build/libs")
         val explicitJar = project.findProperty("worldgenJar") as String?
         val worldgenJar = if (explicitJar != null) {

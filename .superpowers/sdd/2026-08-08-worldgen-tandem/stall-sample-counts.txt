@@ -19,3 +19,15 @@ Extracted by controller from the raw sample captures, which live in /tmp and are
 
 --- /tmp/ab-armA-sample-3.txt  (Analysis of sampling java (pid 33718) every 1 millisecond)
 
+--- /tmp/ab-armB-sample-1.txt  (Analysis of sampling java (pid 34270) every 1 millisecond)
++                                                                                           1648 kk_timeline_wait  (in libvulkan_kosmickrisp.dylib) + 112  [0x17671afa4]
+
+--- /tmp/ab-armB-sample-2.txt  (Analysis of sampling java (pid 34270) every 1 millisecond)
++                                                                                           1807 kk_timeline_wait  (in libvulkan_kosmickrisp.dylib) + 112  [0x17671afa4]
+
+--- /tmp/ab-armB-sample-3.txt  (Analysis of sampling java (pid 34270) every 1 millisecond)
++                                                                                           1713 kk_timeline_wait  (in libvulkan_kosmickrisp.dylib) + 112  [0x17671afa4]
+
+--- /tmp/ab-armB-sample-4.txt  (Analysis of sampling java (pid 34270) every 1 millisecond)
++                                                                                           1727 kk_timeline_wait  (in libvulkan_kosmickrisp.dylib) + 112  [0x17671afa4]
+

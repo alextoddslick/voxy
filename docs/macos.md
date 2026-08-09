@@ -42,8 +42,8 @@ be exercised anywhere via `-PvoxyForceNoIndirectCount`.
 > **Correction (2026-08-08).** "Multi-minute sessions run without hanging" above holds for Voxy
 > running alone. It does not hold for Voxy paired with Voxy World Gen V2: a same-session A/B on
 > the same world showed the solo arm rendering normally for its entire run while the paired arm's
-> render thread locked into a GPU fence wait ~13 seconds after world join and never produced a
-> second frame. See [Running with Voxy World Gen V2](#running-with-voxy-world-gen-v2) below for
+> render thread locked into a GPU fence wait ~13 seconds after world join and never produced
+> another frame. See [Running with Voxy World Gen V2](#running-with-voxy-world-gen-v2) below for
 > the full evidence.
 
 **MoltenVK is a dead end today.** Zink negotiates the same GL 4.6 core context on top of
@@ -290,10 +290,18 @@ the same set the `zinkRun` block injects for the game itself.
 ## Running with Voxy World Gen V2
 
 [Voxy World Gen V2](https://github.com/iSeeEthan/voxy_worldgen_v2) background-generates chunks and
-streams LOD data into Voxy's ingest service. Its 1.21.1 backport lives on the `backport/1.21.1`
-branch of `alextoddslick/voxy_worldgen_v2` and pairs with this Voxy build. Until the Zink work
+streams LOD data into Voxy's ingest service, and pairs with this Voxy build. Until the Zink work
 above, the pairing could only be tested from a Windows client, because macOS caps native OpenGL at
 4.1 and Voxy needs 4.3+.
+
+**Everything in this section was tested against `alextoddslick/voxy_worldgen_v2` @
+`feature/client-lod-memory` commit `1f1a965` (2026-08-07), pinned explicitly because that repo has
+since moved on to a Minecraft 26.1.2 port and its default branch, `backport/1.21.1`, does not
+contain the code this section describes: it has no `LodMemory` class at all, so the LOD-delivery
+check below (non-empty `.bin` files under `run/voxyworldgenv2/lodmemory/`) does not apply there —
+building `backport/1.21.1` and then looking for those files will find a directory that build can
+never create. Check out `1f1a965` explicitly (`git checkout 1f1a965`) before building; do not
+assume whatever is currently checked out in that repo matches what was tested here.
 
 **Status: the pairing does not render on macOS today.** The two mods load and coexist cleanly, and
 background generation works perfectly — 480–576 chunks with zero failures across four separate
@@ -306,7 +314,7 @@ back:
 
 | Arm | `kk_timeline_wait` main-thread samples | `RenderStatistics` lines | Window |
 |---|---|---|---|
-| Voxy alone | 1–2 out of ~1100+ per sample (3 samples: 1, 2, 0) | 55, live terrain, layer-1 `quadCount` fluctuating 11511–23864 | renders normally |
+| Voxy alone | 1–2 out of ~1100+ per sample (3 samples: 1, 2, 0) | 55, live terrain, layer-1 `quadCount` fluctuating 11511–23864 while actively in-world (dropping to 1509 in the final two samples, taken after the run logged "Saving and pausing game" and started unloading) | renders normally |
 | Voxy + `voxyworldgenv2` | 100% of the main thread in all 4 samples taken (1648–1807), from 13s to 4 minutes after join | 1, all zeros, then nothing for 4 minutes | frozen on the last good frame (not black — see caution below) |
 
 The stack is
@@ -327,19 +335,29 @@ into one story.
 This is worth an investigation of its own. Both arms of the A/B independently show a macOS GPU
 firmware-detected-lockup event (`gpuEvent-java-*.ips`, `restart_reason_desc:
 "firmware-detected lockup"`) at or immediately after world join — Voxy alone recovers cleanly from
-two such events and keeps rendering, while the paired run's only such event, 3 seconds after join,
-coincides almost exactly with the onset of the permanent stall. That correlation doesn't prove
-causation, but it points at a sharper next question than a vague "something about worldgen breaks
-rendering": does `voxyworldgenv2` leave a GPU fence outstanding across that lockup/restart boundary
-that the Voxy-alone path does not, since `rawIngest` runs on the client and touches Voxy's LOD
-store while the render thread is drawing from it. Nothing here suggests the companion mod is at
-fault rather than Zink/KosmicKrisp generally — this looks like it lives inside the platform's own
-GPU-recovery path.
+two such events (16:22:08, 16:22:12) and keeps rendering, while the paired run's only such event, 3
+seconds after join, coincides almost exactly with the onset of the permanent stall. The recovery
+claim needs one caveat, though: Voxy alone shows a *third* such event, at 16:24:53, that coincides
+to the same second with Arm A's own end-of-run death — so at least one of the two arms' GPU events
+did line up with a process ending, on both sides of the comparison, and Arm A's death is itself
+unconfirmed as a memory-pressure kill (no matching `JetsamEvent`) versus a GPU-firmware restart it
+simply didn't survive that time. That correlation doesn't prove causation, but it points at a
+sharper next question than a vague "something about worldgen breaks rendering": does
+`voxyworldgenv2` leave a GPU fence outstanding across that lockup/restart boundary that the
+Voxy-alone path does not, since `rawIngest` runs on the client and touches Voxy's LOD store while
+the render thread is drawing from it. The A/B above already establishes that the
+*outcome* is specific to the pairing — Arm A never enters the stall, Arm B is in it within 13
+seconds every time — that part isn't in question. What's still open is where in the pairing the
+fault sits: the firmware-detected lockup/restart itself may be a platform-level event that would
+happen regardless of what's loaded, with the companion mod's difference being whether the render
+thread can recover from it — in which case the trigger lives in Zink/KosmicKrisp's own GPU-recovery
+path, but the pairing is still what turns a survivable event into a permanent one.
 
-Build the mod in its own checkout, then launch this client with `-Pworldgen`:
+Build the mod in its own checkout — pinned to the tested ref, since that repo's checked-out branch
+today is whatever its own, unrelated work left it on — then launch this client with `-Pworldgen`:
 
 ```bash
-cd ../voxy_worldgen_v2 && JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew build
+cd ../voxy_worldgen_v2 && git checkout 1f1a965 && JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew build
 cd -  && ./scripts/macos/run-zink-client.sh -Pworldgen -PvoxyDebugStats
 ```
 
@@ -366,18 +384,27 @@ read Voxy's render state, which it uses to decide whether to generate at all: if
 Generation progress logs every 10 s as
 `generating [minecraft:overworld]: N done @ X/s, ...`.
 
-Delivery into Voxy would be confirmed by non-empty `.bin` files under
-`run/voxyworldgenv2/lodmemory/`, which are written only for columns Voxy's `rawIngest` fully
-accepted — but this checkpoint is **unproven** from every run captured so far: every attempt ended
-in `SIGKILL`, which the JVM cannot intercept or run shutdown hooks against, so neither the
-tick-gated flush nor the graceful-disconnect flush ever ran, and the one `.bin` file present on
-disk predates every run in this investigation by hours. Two cautions if you try to verify this
-yourself. First, `LodMemory.flush()` only runs from `tick()` (30 s debounce) or a graceful
-`onDisconnect()`, so a client killed with `pkill` (or SIGKILLed by the OS) writes nothing and
-leaves a stale file from an earlier session — check the mtime before trusting it. Second,
-**non-zero `quadCount` at LOD layer 1 or beyond does not prove worldgen ingest**: Voxy's LOD store
-is also filled by its own ingest of normally-loaded chunks and persists across runs, and the
-Voxy-alone control arm above shows healthy layer-1 values with the companion mod absent entirely.
+Delivery into Voxy is confirmed by non-empty `.bin` files under `run/voxyworldgenv2/lodmemory/`,
+which are written only for columns Voxy's `rawIngest` fully accepted — and this checkpoint **was
+demonstrated once**: `lodmemory/436c2ac36846adbb/minecraft_overworld.bin`, 556 bytes, mtime 15:36,
+was written during Task 2's run (world join 15:35:26, stock config, ended 1m09s later via a
+deliberate `pkill` that exited 143/SIGTERM — not an OS SIGKILL), consistent with
+`LodMemory.tick()`'s 30-second debounce flushing mid-session rather than at shutdown. `record()`
+is called from exactly one site
+(`NetworkClientHandler.java:104-105`, guarded by `if (allIngested)`, "Record only what actually
+reached Voxy in full"), and `dirty` is set only inside `record()` — so a non-empty file is direct
+proof at least one column was fully accepted by `rawIngest` that session. It was **not reproduced
+in any later run**: every subsequent attempt (Task 3's three attempts, all launched after 15:53)
+stalled in the render-thread fence wait before a tick-flush could fire and was then SIGKILLed,
+which the JVM cannot intercept or run shutdown hooks against, so neither the tick-gated flush nor
+the graceful-disconnect flush ever ran again. Two cautions if you try to verify this yourself.
+First, `LodMemory.flush()` only runs from `tick()` (30 s debounce) or a graceful `onDisconnect()`,
+so a client killed with `pkill` (or SIGKILLed by the OS) writes nothing and leaves a stale file
+from an earlier session — check the mtime against your own run's join time before trusting it; one
+success, once, is not the same as this path being robustly verified. Second, **non-zero
+`quadCount` at LOD layer 1 or beyond does not prove worldgen ingest**: Voxy's LOD store is also
+filled by its own ingest of normally-loaded chunks and persists across runs, and the Voxy-alone
+control arm above shows healthy layer-1 values with the companion mod absent entirely.
 
 ## Debugging
 
