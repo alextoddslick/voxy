@@ -126,9 +126,10 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
   private RenderFrame submitMetalFrame(RenderFrameContext context) {
     this.profiler.endFrame();
     this.releaseHeldTranslucentSlot();
+    double renderScale = this.effectiveRenderScale();
     this.ensureGbuffer(
-        Math.max(1, (int) Math.round(context.viewportWidth() * this.config.renderScale())),
-        Math.max(1, (int) Math.round(context.viewportHeight() * this.config.renderScale())));
+        Math.max(1, (int) Math.round(context.viewportWidth() * renderScale)),
+        Math.max(1, (int) Math.round(context.viewportHeight() * renderScale)));
 
     long tTick = this.profiler.begin();
     this.terrainResources.tick(context, this.gbuffer.nativeHandle());
@@ -422,6 +423,20 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
       this.gbuffer.close();
       this.gbuffer = null;
     }
+  }
+
+  /**
+   * Distant-layer resolution factor: the {@code voxy.gl41metal.renderScale} JVM property when
+   * explicitly set, else the live in-game "Distant render scale" setting. Read every frame so
+   * slider changes apply immediately via the in-place gbuffer resize below.
+   */
+  private double effectiveRenderScale() {
+    double override = this.config.renderScale();
+    if (override > 0) {
+      return override;
+    }
+    return Math.max(
+        0.25, Math.min(1.0, me.cortex.voxy.client.config.VoxyConfig.CONFIG.distantRenderScalePercent / 100.0));
   }
 
   private void ensureGbuffer(int width, int height) {

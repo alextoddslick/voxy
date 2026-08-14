@@ -149,6 +149,19 @@ public abstract class VoxyConfigScreenPages {
                         .setImpact(OptionImpact.LOW)
                         .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
                         .build()
+                ).add(OptionImpl.createBuilder(int.class, storage)
+                        .setName(Component.literal("Distant render scale"))
+                        .setTooltip(Component.literal(
+                                "Resolution of the distant LOD terrain as a percent of the screen"
+                                    + " (macOS Metal backend). Lower is faster - the cost scales"
+                                    + " with the square - and 50% equals the logical resolution on"
+                                    + " Retina displays. Applies immediately."))
+                        .setControl(opt -> new SliderControl(opt, 25, 100, 5,
+                                v -> Component.literal(v + "%")))
+                        .setBinding((s, v) -> s.distantRenderScalePercent = v,
+                                s -> s.distantRenderScalePercent)
+                        .setImpact(OptionImpact.HIGH)
+                        .build()
                 ).build()
         );
 

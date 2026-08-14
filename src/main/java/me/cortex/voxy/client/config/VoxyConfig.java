@@ -51,6 +51,12 @@ public class VoxyConfig implements OptionStorage<VoxyConfig> {
     // higher values = more extreme curvature. Range: 0, or 50-5000.
     public int earthCurveRatio = 0;
 
+    // Distant-terrain render scale (gl41metal): resolution of the Metal-rendered LOD layer as a
+    // percent of the framebuffer. Fill cost scales with the square; 50 equals the logical
+    // resolution on retina/HiDPI displays. Range 25-100. The JVM property
+    // -Dvoxy.gl41metal.renderScale, when set, overrides this for the launch.
+    public int distantRenderScalePercent = 50;
+
     public String ssaoMode;
 
     public SSAO.SSAOMode getSSAOMode() {

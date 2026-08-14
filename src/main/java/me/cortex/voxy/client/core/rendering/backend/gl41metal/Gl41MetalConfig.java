@@ -14,12 +14,12 @@ record Gl41MetalConfig(
         readInt("voxy.gl41metal.waitTimeoutMs", 6, 0, 100),
         readBoolean("voxy.gl41metal.visibleComposite", true),
         readInt("voxy.gl41metal.meshBatchSize", 32, 16, 64),
-        // Distant-layer resolution relative to the framebuffer. The bridge maps target pixels
-        // to gbuffer texels through uSharedSize/uTargetSize, so any ratio composites correctly;
-        // fill cost scales with the square (0.5 = quarter the raster/bandwidth work). Default
-        // 0.5: on retina displays that equals the logical resolution, and measured Metal GPU
-        // time drops ~40% avg / ~55% worst-case. Set 1.0 for full-resolution distant terrain.
-        readDouble("voxy.gl41metal.renderScale", 0.5, 0.25, 1.0));
+        // Distant-layer resolution override. Unset (-1) follows the in-game "Distant render
+        // scale" setting (VoxyConfig.distantRenderScalePercent); an explicit value pins the
+        // scale for this launch. The bridge maps target pixels to gbuffer texels through
+        // uSharedSize/uTargetSize, so any ratio composites correctly; fill cost scales with
+        // the square (0.5 = quarter the raster/bandwidth work).
+        readDouble("voxy.gl41metal.renderScale", -1.0, 0.25, 1.0));
   }
 
   private static double readDouble(String property, double fallback, double min, double max) {
