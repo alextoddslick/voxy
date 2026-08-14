@@ -58,6 +58,11 @@ bool importSurfaceToGlTexture(
     int height,
     GLenum target,
     std::string* error) {
+  // glGetError() below must only observe errors from THIS import. The queue can hold stale
+  // errors from other mods sharing the context (observed: BMC3's Flywheel/pack-shader GL4.1
+  // capability probes leave GL_INVALID_VALUE queued, misattributed here as an import failure).
+  while (glGetError() != GL_NO_ERROR) {
+  }
   GLuint texture = 0;
   glGenTextures(1, &texture);
   glBindTexture(target, texture);
