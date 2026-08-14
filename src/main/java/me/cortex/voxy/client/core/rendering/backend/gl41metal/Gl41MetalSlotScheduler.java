@@ -66,10 +66,13 @@ final class Gl41MetalSlotScheduler {
                 + " (bounded wait); further occurrences are counted, not logged");
       }
     } else {
+      // No completed frame exists yet (startup or a long GPU burst). Skip the composite for
+      // this frame but leave the current slot in flight: discarding it here would retire every
+      // submission before it could ever reach MetalReady, permanently blanking the distant
+      // layer whenever Metal frames outlast the bounded wait (observed: 9763/9763 frames).
       this.skippedCurrent++;
       if (currentSlot >= 0) {
         this.timeouts++;
-        Gl41MetalNative.discardCurrentSlot(gbuffer.nativeHandle(), currentSlot);
       }
     }
     return selected;
