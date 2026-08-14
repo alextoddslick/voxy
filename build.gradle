@@ -109,6 +109,12 @@ loom {
             ].each { key, defaultValue ->
                 property key, System.getProperty(key, defaultValue)
             }
+
+            // -PautoJoin=host:port joins a server on launch (headless smoke tests)
+            if (project.hasProperty('autoJoin')) {
+                programArgs '--quickPlayMultiplayer', project.property('autoJoin').toString(),
+                        '--username', 'VoxyTester'
+            }
         }
     }
 }
@@ -127,6 +133,20 @@ dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+    // Optional dev-runtime pairing with Voxy World Gen V2 (-Pworldgen), mirroring the
+    // multiversion branch's mechanism. One universal jar serves integrated server + client.
+    // Cloth Config is required at config-screen time but undeclared in that mod's fabric.mod.json.
+    if (project.hasProperty('worldgen')) {
+        def worldgenJar = file(project.findProperty('worldgenJar')
+                ?: '/Users/alextodd/temp/Github-NOTSYNCED/voxy_worldgen_v2/build/libs/Voxy World Gen V2-1.21.1-2.2.4.jar')
+        if (!worldgenJar.exists()) {
+            throw new GradleException("-Pworldgen: $worldgenJar does not exist")
+        }
+        logger.lifecycle("worldgen: adding ${worldgenJar.name} to the dev runtime")
+        modRuntimeOnly(files(worldgenJar))
+        modRuntimeOnly "me.shedaniel.cloth:cloth-config-fabric:15.0.140"
+    }
 
 
     modRuntimeOnlyMsk(fabricApi.module("fabric-api-base", project.fabric_api_version))
