@@ -90,7 +90,7 @@ loom {
             // GL41Metal backend tunables/debug switches (see Gl41MetalConfig)
             [
                 'voxy.gl41metal.slotCount'            : '3',
-                'voxy.gl41metal.waitTimeoutMs'        : '0',
+                'voxy.gl41metal.waitTimeoutMs'        : '6',
                 'voxy.gl41metal.visibleComposite'     : 'true',
                 'voxy.gl41metal.residencyMaxSections' : '262144',
                 'voxy.gl41metal.geometryCapacityMb'   : '256',

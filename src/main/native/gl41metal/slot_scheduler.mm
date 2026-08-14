@@ -66,11 +66,37 @@ Java_me_cortex_voxy_client_core_rendering_backend_gl41metal_Gl41MetalNative_wait
     throwJava(env, context->asyncFailure);
     return -1;
   }
-  if (context->slots[currentSlot].state != SlotState::MetalReady) {
+  int chosen = -1;
+  if (context->slots[currentSlot].state == SlotState::MetalReady) {
+    chosen = currentSlot;
+  } else {
+    // Bounded wait expired before the current frame's Metal work finished. Composite the
+    // newest completed frame instead of stalling the render thread (heavy ingest churn on
+    // servers produced 20-50ms Metal frames) or dropping the distant layer for a frame.
+    int64_t bestFrame = -1;
+    for (size_t i = 0; i < context->slots.size(); i++) {
+      Slot& s = context->slots[i];
+      if (s.state == SlotState::MetalReady && s.frameId > bestFrame) {
+        bestFrame = s.frameId;
+        chosen = static_cast<int>(i);
+      }
+    }
+  }
+  if (chosen < 0) {
     return -1;
   }
-  context->slots[currentSlot].state = SlotState::GlSampling;
-  return currentSlot;
+  // Older completed frames superseded by `chosen` will never be sampled; free them so the
+  // slot pool cannot starve while the stale-sampling fallback is active.
+  for (size_t i = 0; i < context->slots.size(); i++) {
+    Slot& s = context->slots[i];
+    if (static_cast<int>(i) != chosen && s.state == SlotState::MetalReady &&
+        s.frameId < context->slots[chosen].frameId) {
+      s.state = SlotState::Free;
+      s.frameId = -1;
+    }
+  }
+  context->slots[chosen].state = SlotState::GlSampling;
+  return chosen;
 }
 
 JNIEXPORT void JNICALL

@@ -55,15 +55,21 @@ final class Gl41MetalSlotScheduler {
     this.maxWaitMs = Math.max(this.maxWaitMs, (System.nanoTime() - waitStart) / 1_000_000.0);
     if (currentSlot >= 0 && selected == currentSlot) {
       this.sampledCurrent++;
+    } else if (selected >= 0) {
+      // Bounded wait expired; the native side handed back the newest completed frame instead.
+      // The current slot stays in flight and is sampled on a later frame - do NOT discard it.
+      this.skippedCurrent++;
+      if (!this.loggedCurrentTimeout) {
+        this.loggedCurrentTimeout = true;
+        Logger.info(
+            "Voxy GL41Metal compositing the previous completed frame while Metal work is busy"
+                + " (bounded wait); further occurrences are counted, not logged");
+      }
     } else {
       this.skippedCurrent++;
       if (currentSlot >= 0) {
         this.timeouts++;
         Gl41MetalNative.discardCurrentSlot(gbuffer.nativeHandle(), currentSlot);
-      }
-      if (currentSlot >= 0 && !this.loggedCurrentTimeout) {
-        this.loggedCurrentTimeout = true;
-        Logger.warn("Voxy GL41Metal skipped current-frame composite after debug bounded wait");
       }
     }
     return selected;

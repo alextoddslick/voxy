@@ -5,7 +5,9 @@ record Gl41MetalConfig(
   static Gl41MetalConfig fromSystemProperties() {
     return new Gl41MetalConfig(
         readInt("voxy.gl41metal.slotCount", 3, 2, 8),
-        readInt("voxy.gl41metal.waitTimeoutMs", 0, 0, 100),
+        // Bounded by default: past this the composite falls back to the newest completed Metal
+        // frame instead of stalling the render thread (0 = legacy unbounded blocking wait).
+        readInt("voxy.gl41metal.waitTimeoutMs", 6, 0, 100),
         readBoolean("voxy.gl41metal.visibleComposite", true),
         readInt("voxy.gl41metal.meshBatchSize", 32, 16, 64));
   }
