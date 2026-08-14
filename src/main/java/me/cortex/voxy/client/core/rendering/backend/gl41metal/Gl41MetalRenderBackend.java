@@ -126,7 +126,9 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
   private RenderFrame submitMetalFrame(RenderFrameContext context) {
     this.profiler.endFrame();
     this.releaseHeldTranslucentSlot();
-    this.ensureGbuffer(context.viewportWidth(), context.viewportHeight());
+    this.ensureGbuffer(
+        Math.max(1, (int) Math.round(context.viewportWidth() * this.config.renderScale())),
+        Math.max(1, (int) Math.round(context.viewportHeight() * this.config.renderScale())));
 
     long tTick = this.profiler.begin();
     this.terrainResources.tick(context, this.gbuffer.nativeHandle());

@@ -105,6 +105,7 @@ loom {
                 'voxy.gl41metal.boundHorizontalMargin': '0',
                 'voxy.gl41metal.boundAddDelayFrames'  : '1',
                 'voxy.gl41metal.meshBatchSize'        : '32',
+                'voxy.gl41metal.renderScale'          : '0.5',
                 'voxy.fluidBridgeWalls'               : 'true',
             ].each { key, defaultValue ->
                 property key, System.getProperty(key, defaultValue)

@@ -49,8 +49,10 @@ final class MetalDistantRenderer {
           computeEarthRadius(),
           computeNearExclusionRadius(),
           computeRenderDistanceSquared(),
-          context.viewportWidth(),
-          context.viewportHeight(),
+          // The raster viewport is the gbuffer's own size, which may be renderScale-reduced
+          // relative to the game framebuffer; the GL bridge rescales at composite time.
+          gbuffer.width(),
+          gbuffer.height(),
           ssaoMatricesAddress,
           ssaoSteps);
     } finally {
