@@ -79,6 +79,15 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
   /** Newest Metal frame id observed COMPLETED (via sampling); -1 until the first completes. */
   private long newestCompletedFrameId = -1;
 
+  /**
+   * The newest completed slot, HELD instead of retired so a GPU burst that leaves nothing newly
+   * finished can re-composite it (reprojected, so still correctly registered) rather than skip
+   * the composite — skipping blanked the whole distant layer for a frame, which the user sees as
+   * flicker (measured: 189 blink-frames in one 5,438-frame session). A slot is only retired when
+   * a NEWER completed frame replaces it.
+   */
+  private int heldCompletedSlot = -1;
+
   private int countInFlightSubmits() {
     int inFlight = 0;
     for (SlotSubmitState state : this.slotSubmitStates) {
@@ -280,13 +289,26 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
     }
 
     long tWait = this.profiler.begin();
-    int sampleSlot =
+    int selected =
         this.slotScheduler.selectSlotForSampling(this.gbuffer, gl41MetalFrame.writeSlot());
     this.profiler.recordSlotWait(tWait);
-    if (sampleSlot < 0) {
-      return;
+    int sampleSlot;
+    if (selected >= 0) {
+      if (this.heldCompletedSlot >= 0
+          && this.heldCompletedSlot != selected
+          && this.heldCompletedSlot != this.heldTranslucentSlot) {
+        this.slotScheduler.queueSampledSlotRetirement(this.gbuffer, this.heldCompletedSlot);
+      }
+      this.heldCompletedSlot = selected;
+      sampleSlot = selected;
+    } else if (this.heldCompletedSlot >= 0) {
+      // Nothing newly completed within the wait budget: blink-free fallback. Reprojection makes
+      // re-compositing the held frame exactly as correct as it was last frame.
+      sampleSlot = this.heldCompletedSlot;
+      this.slotScheduler.recordReusedHeld();
+    } else {
+      return; // true startup: nothing has ever completed
     }
-    boolean held = false;
     try {
       RenderFrameContext renderContext =
           stageContext == null ? gl41MetalFrame.context() : stageContext;
@@ -389,7 +411,6 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
             } else {
               this.heldReprojValid = false;
             }
-            held = true;
           }
           return;
         } else {
@@ -423,9 +444,8 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
           this.currentBound);
       this.profiler.recordBridgeOpaque(tBridge);
     } finally {
-      if (!held) {
-        this.slotScheduler.queueSampledSlotRetirement(this.gbuffer, sampleSlot);
-      }
+      // Retirement is handled at replacement time (see heldCompletedSlot above); the sampled
+      // slot stays resident so a GPU burst next frame can re-composite it blink-free.
     }
   }
 
@@ -474,7 +494,9 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
 
   /** Fence-deferred retirement of the held translucent slot, if any. */
   private void releaseHeldTranslucentSlot() {
-    if (this.heldTranslucentSlot >= 0 && this.gbuffer != null) {
+    if (this.heldTranslucentSlot >= 0
+        && this.gbuffer != null
+        && this.heldTranslucentSlot != this.heldCompletedSlot) {
       this.slotScheduler.queueSampledSlotRetirement(this.gbuffer, this.heldTranslucentSlot);
     }
     this.heldTranslucentSlot = -1;
@@ -563,6 +585,8 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
       this.slotSubmitStates[i] = new SlotSubmitState();
     }
     this.newestCompletedFrameId = -1;
+    // Native slots were forced back to Free; the held slot id would be stale.
+    this.heldCompletedSlot = -1;
   }
 
   private void ensureGbuffer(int width, int height) {
