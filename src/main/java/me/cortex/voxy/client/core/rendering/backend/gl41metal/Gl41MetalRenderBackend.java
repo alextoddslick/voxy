@@ -180,7 +180,14 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
   private RenderFrame submitMetalFrame(RenderFrameContext context) {
     this.profiler.endFrame();
     this.releaseHeldTranslucentSlot();
-    this.ensureGbuffer(context.viewportWidth(), context.viewportHeight());
+    float gbufferOverscan =
+        this.config.reprojection() ? 1.0f + this.config.overscanPercent() / 100.0f : 1.0f;
+    // The gbuffer carries the overscanned frustum at FULL screen density: same FOV-per-texel as
+    // the screen, so the composite never minifies (nearest-resampling a minified packed gbuffer
+    // shimmers). Overscan therefore costs memory + raster area, never sharpness.
+    this.ensureGbuffer(
+        Math.round(context.viewportWidth() * gbufferOverscan),
+        Math.round(context.viewportHeight() * gbufferOverscan));
 
     long tTick = this.profiler.begin();
     this.terrainResources.tick(context, this.gbuffer.nativeHandle());

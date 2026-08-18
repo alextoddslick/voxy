@@ -49,8 +49,8 @@ final class MetalDistantRenderer {
           computeEarthRadius(),
           computeNearExclusionRadius(),
           computeRenderDistanceSquared(),
-          context.viewportWidth(),
-          context.viewportHeight(),
+          gbuffer.width(),
+          gbuffer.height(),
           ssaoMatricesAddress,
           ssaoSteps);
     } finally {
