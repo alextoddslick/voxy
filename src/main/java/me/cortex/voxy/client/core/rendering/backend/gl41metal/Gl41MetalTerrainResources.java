@@ -21,7 +21,7 @@ final class Gl41MetalTerrainResources implements AutoCloseable {
   private static final int MAX_RESIDENT_SECTIONS =
       readInt("voxy.gl41metal.residencyMaxSections", 1 << 18, 1024, 1 << 20);
   private static final long GEOMETRY_CAPACITY_BYTES =
-      (long) readInt("voxy.gl41metal.geometryCapacityMb", 256, 16, 2048) * 1024L * 1024L;
+      (long) readInt("voxy.gl41metal.geometryCapacityMb", 256, 16, 8192) * 1024L * 1024L;
   private static final int MAX_NODES =
       readInt("voxy.gl41metal.maxNodes", 1 << 21, 1024, (1 << 24) - 1);
   private static final int MAX_TRAVERSAL_QUEUE =
