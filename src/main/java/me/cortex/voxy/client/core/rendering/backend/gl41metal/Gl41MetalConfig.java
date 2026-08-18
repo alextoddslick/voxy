@@ -31,7 +31,9 @@ record Gl41MetalConfig(
         // Extra FOV rendered past the screen edges (percent). Costs raster area but gives stale
         // frames real content at the edges instead of blanks, and pre-refines LOD just outside
         // the view. Only effective while reprojection is on (the warp is what reads the margin).
-        readInt("voxy.gl41metal.overscanPercent", 12, 0, 50));
+        // DEFAULT 0 (off): the 12% experiment reintroduced whole-field flicker for the user
+        // twice (as-is and at full gbuffer density); opt in explicitly while it is being tamed.
+        readInt("voxy.gl41metal.overscanPercent", 0, 0, 50));
   }
 
   private static boolean readBoolean(String property, boolean fallback) {

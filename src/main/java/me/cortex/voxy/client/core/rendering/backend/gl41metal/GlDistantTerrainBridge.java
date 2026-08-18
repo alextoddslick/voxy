@@ -1665,6 +1665,18 @@ final class GlDistantTerrainBridge implements AutoCloseable {
         return uv * ts;
       }
 
+      // Pins a warped source pixel to the CENTER of the shared texel the composite will sample,
+      // so sub-pixel warp motion between frames cannot wobble the reconstructed depth (the
+      // wobble z-fights the near scene across the whole overlap band and reads as flicker).
+      vec2 snapToSharedTexel(vec2 targetPixel) {
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec2 ss = max(uSharedSize, vec2(1.0));
+        vec2 sharedPixel = targetPixel * (ss / ts);
+        float sharedYFlipped = ss.y - sharedPixel.y;
+        vec2 texelCenter = vec2(floor(sharedPixel.x) + 0.5, floor(sharedYFlipped) + 0.5);
+        return vec2(texelCenter.x, ss.y - texelCenter.y) * (ts / ss);
+      }
+
       // gl_FragCoord.z override for the full-screen-quad bridge.
       //
       // GL46 voxy renders the distant LOD as real per-triangle geometry, so a shader pack's
@@ -1896,6 +1908,18 @@ final class GlDistantTerrainBridge implements AutoCloseable {
         return uv * ts;
       }
 
+      // Pins a warped source pixel to the CENTER of the shared texel the composite will sample,
+      // so sub-pixel warp motion between frames cannot wobble the reconstructed depth (the
+      // wobble z-fights the near scene across the whole overlap band and reads as flicker).
+      vec2 snapToSharedTexel(vec2 targetPixel) {
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec2 ss = max(uSharedSize, vec2(1.0));
+        vec2 sharedPixel = targetPixel * (ss / ts);
+        float sharedYFlipped = ss.y - sharedPixel.y;
+        vec2 texelCenter = vec2(floor(sharedPixel.x) + 0.5, floor(sharedYFlipped) + 0.5);
+        return vec2(texelCenter.x, ss.y - texelCenter.y) * (ts / ss);
+      }
+
       float faceTint(uint face) {
         if ((face >> 1u) == 1u) return 0.8;
         if ((face >> 1u) == 2u) return 0.6;
@@ -2031,6 +2055,18 @@ final class GlDistantTerrainBridge implements AutoCloseable {
         return uv * ts;
       }
 
+      // Pins a warped source pixel to the CENTER of the shared texel the composite will sample,
+      // so sub-pixel warp motion between frames cannot wobble the reconstructed depth (the
+      // wobble z-fights the near scene across the whole overlap band and reads as flicker).
+      vec2 snapToSharedTexel(vec2 targetPixel) {
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec2 ss = max(uSharedSize, vec2(1.0));
+        vec2 sharedPixel = targetPixel * (ss / ts);
+        float sharedYFlipped = ss.y - sharedPixel.y;
+        vec2 texelCenter = vec2(floor(sharedPixel.x) + 0.5, floor(sharedYFlipped) + 0.5);
+        return vec2(texelCenter.x, ss.y - texelCenter.y) * (ts / ss);
+      }
+
       void main() {
         vec2 srcPixel = reprojTargetPixel(gl_FragCoord.xy);
         if (vxReprojOob) discard;
@@ -2130,6 +2166,18 @@ final class GlDistantTerrainBridge implements AutoCloseable {
         return uv * ts;
       }
 
+      // Pins a warped source pixel to the CENTER of the shared texel the composite will sample,
+      // so sub-pixel warp motion between frames cannot wobble the reconstructed depth (the
+      // wobble z-fights the near scene across the whole overlap band and reads as flicker).
+      vec2 snapToSharedTexel(vec2 targetPixel) {
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec2 ss = max(uSharedSize, vec2(1.0));
+        vec2 sharedPixel = targetPixel * (ss / ts);
+        float sharedYFlipped = ss.y - sharedPixel.y;
+        vec2 texelCenter = vec2(floor(sharedPixel.x) + 0.5, floor(sharedYFlipped) + 0.5);
+        return vec2(texelCenter.x, ss.y - texelCenter.y) * (ts / ss);
+      }
+
       void main() {
         vec2 targetPixel = gl_FragCoord.xy;
         // The distant carrier's .x is the fragment's Voxy-NDC depth (g.depth), the SAME space the
@@ -2206,6 +2254,7 @@ final class GlDistantTerrainBridge implements AutoCloseable {
               discard;
             }
           }
+          srcPixel = snapToSharedTexel(srcPixel);
         }
         vxSrcPixel = srcPixel;
         vec2 sharedPixel = sharedPixelForTarget(srcPixel);
@@ -2408,6 +2457,18 @@ __VOXY_OPAQUE_MASK__        voxyQuadFlags = g.flags;
         return uv * ts;
       }
 
+      // Pins a warped source pixel to the CENTER of the shared texel the composite will sample,
+      // so sub-pixel warp motion between frames cannot wobble the reconstructed depth (the
+      // wobble z-fights the near scene across the whole overlap band and reads as flicker).
+      vec2 snapToSharedTexel(vec2 targetPixel) {
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec2 ss = max(uSharedSize, vec2(1.0));
+        vec2 sharedPixel = targetPixel * (ss / ts);
+        float sharedYFlipped = ss.y - sharedPixel.y;
+        vec2 texelCenter = vec2(floor(sharedPixel.x) + 0.5, floor(sharedYFlipped) + 0.5);
+        return vec2(texelCenter.x, ss.y - texelCenter.y) * (ts / ss);
+      }
+
       vec4 voxy_OverrideFragCoord;
       """;
 
@@ -2527,6 +2588,7 @@ __VOXY_OPAQUE_MASK__        voxyQuadFlags = g.flags;
               discard;
             }
           }
+          srcPixel = snapToSharedTexel(srcPixel);
         }
         vxSrcPixel = srcPixel;
         vec2 sharedPixel = sharedPixelForTarget(srcPixel);
