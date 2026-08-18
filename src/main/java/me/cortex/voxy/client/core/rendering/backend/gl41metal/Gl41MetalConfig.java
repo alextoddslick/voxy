@@ -1,7 +1,13 @@
 package me.cortex.voxy.client.core.rendering.backend.gl41metal;
 
 record Gl41MetalConfig(
-    int slotCount, int waitTimeoutMs, boolean visibleComposite, int meshBatchSize) {
+    int slotCount,
+    int waitTimeoutMs,
+    boolean visibleComposite,
+    int meshBatchSize,
+    boolean reprojection,
+    boolean reprojRefine,
+    int maxInFlightSubmits) {
   static Gl41MetalConfig fromSystemProperties() {
     return new Gl41MetalConfig(
         readInt("voxy.gl41metal.slotCount", 3, 2, 8),
@@ -9,7 +15,18 @@ record Gl41MetalConfig(
         // frame instead of stalling the render thread (0 = legacy unbounded blocking wait).
         readInt("voxy.gl41metal.waitTimeoutMs", 6, 0, 100),
         readBoolean("voxy.gl41metal.visibleComposite", true),
-        readInt("voxy.gl41metal.meshBatchSize", 32, 16, 64));
+        readInt("voxy.gl41metal.meshBatchSize", 32, 16, 64),
+        // Reproject stale-slot composites into the current camera (fixes the LOD layer sliding
+        // with camera motion under load). Off = pre-reprojection behaviour, for A/B testing.
+        readBoolean("voxy.gl41metal.reprojection", true),
+        // Second warp iteration using the depth found at the first guess: corrects the
+        // camera-TRANSLATION residual of the far-plane mapping on nearer LODs.
+        readBoolean("voxy.gl41metal.reprojRefine", true),
+        // Cap on Metal frames in flight. Submitting every screen frame while the GPU needs
+        // several frames per Metal pass just queues stale work and saturates the GPU; capping
+        // keeps the newest completed frame FRESHER and hands the spare GPU time to vanilla.
+        // 0 = uncapped (old behaviour).
+        readInt("voxy.gl41metal.maxInFlightSubmits", 2, 0, 8));
   }
 
   private static boolean readBoolean(String property, boolean fallback) {

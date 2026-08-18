@@ -21,6 +21,7 @@ final class Gl41MetalSlotScheduler {
   private int sampledCurrent;
   private int skippedCurrent;
   private int noFreeSlot;
+  private int pacedSubmits;
   private int timeouts;
   private double maxWaitMs;
   private boolean loggedNoFreeSlot;
@@ -37,6 +38,10 @@ final class Gl41MetalSlotScheduler {
 
   void recordSubmitted() {
     this.submitted++;
+  }
+
+  void recordPacedSubmit() {
+    this.pacedSubmits++;
   }
 
   void recordNoFreeSlot() {
@@ -109,6 +114,7 @@ final class Gl41MetalSlotScheduler {
     this.sampledCurrent = 0;
     this.skippedCurrent = 0;
     this.noFreeSlot = 0;
+    this.pacedSubmits = 0;
     this.timeouts = 0;
     this.maxWaitMs = 0.0;
     this.loggedNoFreeSlot = false;
@@ -128,6 +134,8 @@ final class Gl41MetalSlotScheduler {
         + this.skippedCurrent
         + ", noFreeSlot="
         + this.noFreeSlot
+        + ", pacedSubmits="
+        + this.pacedSubmits
         + ", timeouts="
         + this.timeouts
         + ", retiring="

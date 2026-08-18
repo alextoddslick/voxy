@@ -91,6 +91,9 @@ loom {
             [
                 'voxy.gl41metal.slotCount'            : '3',
                 'voxy.gl41metal.waitTimeoutMs'        : '6',
+                'voxy.gl41metal.reprojection'         : 'true',
+                'voxy.gl41metal.reprojRefine'         : 'true',
+                'voxy.gl41metal.maxInFlightSubmits'   : '2',
                 'voxy.gl41metal.visibleComposite'     : 'true',
                 'voxy.gl41metal.residencyMaxSections' : '262144',
                 'voxy.gl41metal.geometryCapacityMb'   : '256',

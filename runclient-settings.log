@@ -1,0 +1,436 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.4.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :
+Fabric Loom: 1.11.8
+
+> Task :compileJava UP-TO-DATE
+> Task :compileGl41MetalNative UP-TO-DATE
+> Task :compileGl41MetalShaders UP-TO-DATE
+> Task :processResources
+> Task :classes
+> Task :generateLog4jConfig UP-TO-DATE
+> Task :generateRemapClasspath UP-TO-DATE
+> Task :generateDLIConfig UP-TO-DATE
+> Task :configureLaunch UP-TO-DATE
+> Task :downloadAssets UP-TO-DATE
+> Task :configureClientLaunch UP-TO-DATE
+
+> Task :runClient
+[10:57:05] [main/INFO] (FabricLoader/GameProvider) Loading Minecraft 1.21.1 with Fabric Loader 0.17.2
+[10:57:05] [main/WARN] (FabricLoader/Resolution) Warnings were found!
+ - Mod 'Sodium Extra' (sodium-extra) 0.6.0+mc1.21.1 recommends version 1.4.2 or later of reeses-sodium-options, which is missing!
+	 - You should install version 1.4.2 or later of reeses-sodium-options for the optimal experience.
+[10:57:05] [main/INFO] (FabricLoader) Loading 68 mods:
+	- chunky 1.4.23
+	- cloth-config 15.0.140
+	   \-- cloth-basic-math 0.6.1
+	- devauth 1.1.0
+	- fabric-api 0.116.6+1.21.1
+	- fabric-api-base 0.4.42+6573ed8c19
+	- fabric-api-lookup-api-v1 1.6.71+b559734419
+	- fabric-biome-api-v1 13.0.31+d527f9fd19
+	- fabric-block-api-v1 1.1.0+0bc3503219
+	- fabric-block-view-api-v2 1.0.11+ebb2264e19
+	- fabric-blockrenderlayer-v1 1.1.52+0af3f5a719
+	- fabric-client-tags-api-v1 1.1.15+6573ed8c19
+	- fabric-command-api-v1 1.2.49+f71b366f19
+	- fabric-command-api-v2 2.2.28+6ced4dd919
+	- fabric-commands-v0 0.2.66+df3654b319
+	- fabric-content-registries-v0 8.0.19+b559734419
+	- fabric-convention-tags-v1 2.1.5+7f945d5b19
+	- fabric-convention-tags-v2 2.11.1+a406e79519
+	- fabric-crash-report-info-v1 0.2.29+0af3f5a719
+	- fabric-data-attachment-api-v1 1.4.5+6116a37819
+	- fabric-data-generation-api-v1 20.2.33+37516cd619
+	- fabric-dimensions-v1 4.0.1+65213ef819
+	- fabric-entity-events-v1 1.8.0+2b27e0a419
+	- fabric-events-interaction-v0 0.7.13+ba9dae0619
+	- fabric-game-rule-api-v1 1.0.53+6ced4dd919
+	- fabric-gametest-api-v1 2.0.5+6fc22b9919
+	- fabric-item-api-v1 11.2.0+3b3cb2e819
+	- fabric-item-group-api-v1 4.1.7+def88e3a19
+	- fabric-key-binding-api-v1 1.0.47+0af3f5a719
+	- fabric-keybindings-v0 0.2.45+df3654b319
+	- fabric-lifecycle-events-v1 2.6.0+0865547519
+	- fabric-loot-api-v2 3.0.15+3f89f5a519
+	- fabric-loot-api-v3 1.0.3+3f89f5a519
+	- fabric-message-api-v1 6.0.14+8aaf3aca19
+	- fabric-model-loading-api-v1 2.1.0+b4d813fc19
+	- fabric-networking-api-v1 4.3.0+c7469b2119
+	- fabric-object-builder-api-v1 15.2.1+40875a9319
+	- fabric-particles-v1 4.0.2+6573ed8c19
+	- fabric-permissions-api-v0 0.3.3
+	- fabric-recipe-api-v1 5.0.14+248df81c19
+	- fabric-registry-sync-v0 5.3.1+e3eddc2119
+	- fabric-renderer-api-v1 3.4.1+b4d813fc19
+	- fabric-renderer-indigo 1.7.1+c705a49c19
+	- fabric-renderer-registries-v1 3.2.69+df3654b319
+	- fabric-rendering-data-attachment-v1 0.3.49+73761d2e19
+	- fabric-rendering-fluids-v1 3.1.6+1daea21519
+	- fabric-rendering-v0 1.1.72+df3654b319
+	- fabric-rendering-v1 5.1.0+ab4c25a019
+	- fabric-resource-conditions-api-v1 4.3.0+8dc279b119
+	- fabric-resource-loader-v0 1.3.1+5b5275af19
+	- fabric-screen-api-v1 2.0.25+8b68f1c719
+	- fabric-screen-handler-api-v1 1.3.90+b559734419
+	- fabric-sound-api-v1 1.0.23+6573ed8c19
+	- fabric-transfer-api-v1 5.4.3+c24bd99419
+	- fabric-transitive-access-wideners-v1 6.2.0+45b9699719
+	- fabricloader 0.17.2
+	- iris 1.8.8+mc1.21.1
+	- java 21
+	- lithium 0.15.0+mc1.21.1
+	- minecraft 1.21.1
+	- mixinextras 0.5.0
+	- modmenu 11.0.3
+	- nvidium 0.4.1-beta9-1.21-1.21.1
+	- sodium 0.6.13+mc1.21.1
+	- sodium-extra 0.6.0+mc1.21.1
+	- spark 1.10.152
+	- voxy 0.2.14-alpha
+	- voxyworldgenv2 2.2.5
+[10:57:08] [main/INFO] (FabricLoader/Mixin) SpongePowered MIXIN Subsystem Version=0.8.7 Source=file:/Users/alextodd/.gradle/caches/modules-2/files-2.1/net.fabricmc/sponge-mixin/0.16.3+mixin.0.8.7/3e535042688d1265447e52ad86950b7d9678a5fa/sponge-mixin-0.16.3+mixin.0.8.7.jar Service=Knot/Fabric Env=CLIENT
+[10:57:08] [main/INFO] (FabricLoader/Mixin) Loaded Fabric development mappings for mixin remapper!
+[10:57:08] [main/INFO] (FabricLoader/Mixin) Compatibility level set to JAVA_17
+[10:57:08] [main/INFO] (FabricLoader/Mixin) Compatibility level set to JAVA_21
+[10:57:08] [main/INFO] (Sodium Extra Config) Loaded configuration file for Sodium Extra: 36 options available, 0 override(s) found
+[10:57:08] [main/INFO] (LithiumConfig) Option 'mixin.entity.collisions.fluid' requires 'mixin.util.block_tracking=true' but found 'false'. Setting 'mixin.entity.collisions.fluid=false'.
+[10:57:08] [main/INFO] (LithiumConfig) Option 'mixin.experimental.entity.block_caching.block_support' requires 'mixin.util.block_tracking=true' but found 'false'. Setting 'mixin.experimental.entity.block_caching.block_support=false'.
+[10:57:08] [main/INFO] (LithiumConfig) Option 'mixin.experimental.entity.block_caching.fluid_pushing' requires 'mixin.util.block_tracking=true' but found 'false'. Setting 'mixin.experimental.entity.block_caching.fluid_pushing=false'.
+[10:57:08] [main/INFO] (LithiumConfig) Option 'mixin.experimental.entity.block_caching.block_touching' requires 'mixin.util.block_tracking=true' but found 'false'. Setting 'mixin.experimental.entity.block_caching.block_touching=false'.
+[10:57:08] [main/INFO] (LithiumConfig) Option 'mixin.experimental.entity.block_caching.suffocation' requires 'mixin.util.block_tracking=true' but found 'false'. Setting 'mixin.experimental.entity.block_caching.suffocation=false'.
+[10:57:08] [main/INFO] (LithiumConfig) Option 'mixin.experimental.entity.block_caching' requires 'mixin.util.block_tracking=true' but found 'false'. Setting 'mixin.experimental.entity.block_caching=false'.
+[10:57:08] [main/INFO] (Lithium) Loaded configuration file for Lithium: 149 options available, 0 override(s) found
+[10:57:08] [main/INFO] (Sodium) Loaded configuration file for Sodium: 43 options available, 1 override(s) found
+[10:57:08] [main/WARN] (FabricLoader/Mixin) Error loading class: com/moulberry/flashback/record/FlashbackMeta (java.lang.ClassNotFoundException: com/moulberry/flashback/record/FlashbackMeta)
+[10:57:08] [main/WARN] (FabricLoader/Mixin) @Mixin target com.moulberry.flashback.record.FlashbackMeta was not found client.voxy.mixins.json:flashback.MixinFlashbackMeta from mod voxy
+[10:57:08] [main/WARN] (FabricLoader/Mixin) Error loading class: com/moulberry/flashback/record/Recorder (java.lang.ClassNotFoundException: com/moulberry/flashback/record/Recorder)
+[10:57:08] [main/WARN] (FabricLoader/Mixin) @Mixin target com.moulberry.flashback.record.Recorder was not found client.voxy.mixins.json:flashback.MixinFlashbackRecorder from mod voxy
+[10:57:08] [main/WARN] (Sodium) Force-disabling mixin 'features.render.world.sky.FogRendererMixin' as rule 'mixin.features.render.world.sky' (added by mods [iris]) disables it and children
+[10:57:08] [main/WARN] (Sodium) Force-disabling mixin 'features.render.world.sky.ClientLevelMixin' as rule 'mixin.features.render.world.sky' (added by mods [iris]) disables it and children
+[10:57:08] [main/WARN] (Sodium) Force-disabling mixin 'features.render.world.sky.LevelRendererMixin' as rule 'mixin.features.render.world.sky' (added by mods [iris]) disables it and children
+[10:57:08] [main/INFO] (Sodium-GraphicsAdapterProbe) Searching for graphics cards...
+[10:57:08] [main/INFO] (FabricLoader/MixinExtras|Service) Initializing MixinExtras via com.llamalad7.mixinextras.service.MixinExtrasServiceImpl(version=0.5.0).
+[10:57:09] [main/INFO] (DevAuth) DevAuth disabled, not logging in!
+[10:57:09] [Datafixer Bootstrap/INFO] (Minecraft) 226 Datafixer optimizations took 163 milliseconds
+[10:57:12] [Render thread/INFO] (Minecraft) Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, name=PROD]
+[10:57:12] [Render thread/INFO] (Minecraft) Setting user: VoxyTester
+[10:57:12] [Render thread/INFO] (Voxy) [me.cx.vy.cn.cg.Serialization]: Registered Config as LZ4 for config type CompressorConfig
+[10:57:12] [Render thread/INFO] (Voxy) [me.cx.vy.cn.cg.Serialization]: Registered Config as ZSTD for config type CompressorConfig
+[10:57:12] [Render thread/INFO] (Voxy) [me.cx.vy.cn.cg.Serialization]: Registered Config as Serializer for config type SectionStorageConfig
+[10:57:12] [Render thread/INFO] (Voxy) [me.cx.vy.cn.cg.Serialization]: Registered Config as Memory for config type StorageConfig
+[10:57:12] [Render thread/INFO] (Voxy) [me.cx.vy.cn.cg.Serialization]: Registered Config as LMDB for config type StorageConfig
+[10:57:12] [Render thread/INFO] (Voxy) [me.cx.vy.cn.cg.Serialization]: Registered BasicPathInsertionConfig as BasicPathConfig for config type StorageConfig
+[10:57:12] [Render thread/INFO] (Voxy) [me.cx.vy.cn.cg.Serialization]: Registered Config as CompressionAdaptor for config type StorageConfig
+[10:57:12] [Render thread/INFO] (Voxy) [me.cx.vy.cn.cg.Serialization]: Registered ConditionalStorageBackendConfig as ConditionalConfig for config type StorageConfig
+[10:57:12] [Render thread/INFO] (Voxy) [me.cx.vy.cn.cg.Serialization]: Registered Config as FragmentationAdaptor for config type StorageConfig
+[10:57:12] [Render thread/INFO] (Voxy) [me.cx.vy.cn.cg.Serialization]: Registered Config2 as AutoFragmentationAdaptor for config type StorageConfig
+[10:57:12] [Render thread/INFO] (Voxy) [me.cx.vy.cn.cg.Serialization]: Registered Config as ReadonlyCachingLayer for config type StorageConfig
+[10:57:12] [Render thread/INFO] (Voxy) [me.cx.vy.cn.cg.Serialization]: Registered Config as Redis for config type StorageConfig
+[10:57:12] [Render thread/INFO] (Voxy) [me.cx.vy.cn.cg.Serialization]: Registered Config as RocksDB for config type StorageConfig
+[10:57:12] [Render thread/INFO] (Voxy) [me.cx.vy.cn.cg.Serialization]: Registered 13 config types
+[10:57:12] [Render thread/INFO] (voxyworldgenv2) voxy world gen v2 initializing
+[10:57:12] [Render thread/INFO] (voxyworldgenv2) voxy networking initialized (protocol 4)
+[10:57:12] [Render thread/INFO] (Indigo) [Indigo] Different rendering plugin detected; not applying Indigo.
+[10:57:12] [Render thread/INFO] (voxyworldgenv2) initializing voxy world gen v2 client
+[10:57:12] [Render thread/INFO] (Mod Menu/Update Checker) Checking mod updates...
+[10:57:13] [Render thread/INFO] (Minecraft) Backend library: LWJGL version 3.3.3-snapshot
+[10:57:13] [ModMenu/Update Checker/Fabric Loader/INFO] (Mod Menu/Update Checker) Update available for 'fabricloader@0.17.2'
+[10:57:13] [Render thread/WARN] (Nvidium) Not all requirements met, disabling nvidium
+[10:57:13] [Render thread/INFO] (Minecraft) OpenGL Vendor: Apple
+[10:57:13] [Render thread/INFO] (Minecraft) OpenGL Renderer: Apple M2 Max
+[10:57:13] [Render thread/INFO] (Minecraft) OpenGL Version: 4.1 Metal - 91.7
+[10:57:13] [ForkJoinPool.commonPool-worker-2/WARN] (Iris) [Iris Update Check] This version doesn't have an update index, skipping.
+[10:57:13] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalNative]: Loaded Voxy GL41Metal native library from bundled resource
+[10:57:13] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalNative]: Loaded Voxy GL41Metal shader library from bundled resource
+[10:57:13] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.RenderBackendSelector]: Selected Voxy render backend: GL41METAL (requested='auto', forced=false, reason='GL46 unavailable: compute=false, indirectParameters=false; GL41Metal capabilities are available')
+[10:57:13] [Render thread/WARN] (Voxy) [me.cx.vy.ct.VoxyClient]: Voxy GL41Metal backend selected.
+[10:57:13] [Render thread/INFO] (Iris) Debug functionality is disabled.
+[10:57:13] [Render thread/INFO] (Iris) DSA support not detected.
+[10:57:13] [Render thread/INFO] (Iris) Shaders are disabled because enableShaders is set to false in iris.properties
+[10:57:13] [Render thread/INFO] (Iris) Hardware information:
+[10:57:13] [Render thread/INFO] (Iris) CPU: 12x Apple M2 Max
+[10:57:13] [Render thread/INFO] (Iris) GPU: Apple M2 Max (Supports OpenGL 4.1 Metal - 91.7)
+[10:57:13] [Render thread/INFO] (Iris) OS: Mac OS X (27.0)
+[10:57:14] [Render thread/INFO] (Minecraft) Reloading ResourceManager: vanilla, fabric, chunky, cloth-config, devauth, fabric-api, fabric-api-base, fabric-api-lookup-api-v1, fabric-biome-api-v1, fabric-block-api-v1, fabric-block-view-api-v2, fabric-blockrenderlayer-v1, fabric-client-tags-api-v1, fabric-command-api-v1, fabric-command-api-v2, fabric-commands-v0, fabric-content-registries-v0, fabric-convention-tags-v1, fabric-convention-tags-v2, fabric-crash-report-info-v1, fabric-data-attachment-api-v1, fabric-data-generation-api-v1, fabric-dimensions-v1, fabric-entity-events-v1, fabric-events-interaction-v0, fabric-game-rule-api-v1, fabric-gametest-api-v1, fabric-item-api-v1, fabric-item-group-api-v1, fabric-key-binding-api-v1, fabric-keybindings-v0, fabric-lifecycle-events-v1, fabric-loot-api-v2, fabric-loot-api-v3, fabric-message-api-v1, fabric-model-loading-api-v1, fabric-networking-api-v1, fabric-object-builder-api-v1, fabric-particles-v1, fabric-recipe-api-v1, fabric-registry-sync-v0, fabric-renderer-api-v1, fabric-renderer-indigo, fabric-renderer-registries-v1, fabric-rendering-data-attachment-v1, fabric-rendering-fluids-v1, fabric-rendering-v0, fabric-rendering-v1, fabric-resource-conditions-api-v1, fabric-resource-loader-v0, fabric-screen-api-v1, fabric-screen-handler-api-v1, fabric-sound-api-v1, fabric-transfer-api-v1, fabric-transitive-access-wideners-v1, fabricloader, iris, lithium, modmenu, nvidium, sodium, sodium-extra, spark, voxy, voxyworldgenv2
+[10:57:14] [Worker-Main-4/INFO] (Minecraft) Found unifont_all_no_pua-15.1.05.hex, loading
+[10:57:14] [Worker-Main-2/WARN] (FabricLoader/Mixin) Static binding violation: PRIVATE @Overwrite method alphaBlend in sodium-common.mixins.json:features.textures.mipmaps.MipmapGeneratorMixin from mod sodium cannot reduce visibiliy of PUBLIC target method, visibility will be upgraded.
+[10:57:14] [Worker-Main-5/INFO] (Minecraft) Found unifont_jp_patch-15.1.05.hex, loading
+[10:57:15] [Render thread/WARN] (Minecraft) Missing sound for event: minecraft:item.goat_horn.play
+[10:57:15] [Render thread/WARN] (Minecraft) Missing sound for event: minecraft:entity.goat.screaming.horn_break
+[10:57:15] [Render thread/INFO] (Minecraft) OpenAL initialized on device Obsidian Night
+[10:57:15] [Render thread/INFO] (Minecraft) Sound engine started
+[10:57:15] [Render thread/INFO] (Minecraft) Created: 1024x512x4 minecraft:textures/atlas/blocks.png-atlas
+[10:57:15] [Render thread/INFO] (Minecraft) Created: 256x256x4 minecraft:textures/atlas/signs.png-atlas
+[10:57:15] [Render thread/INFO] (Minecraft) Created: 512x512x4 minecraft:textures/atlas/shield_patterns.png-atlas
+[10:57:15] [Render thread/INFO] (Minecraft) Created: 512x512x4 minecraft:textures/atlas/banner_patterns.png-atlas
+[10:57:15] [Render thread/INFO] (Minecraft) Created: 1024x1024x4 minecraft:textures/atlas/armor_trims.png-atlas
+[10:57:15] [Render thread/INFO] (Minecraft) Created: 128x64x4 minecraft:textures/atlas/decorated_pot.png-atlas
+[10:57:15] [Render thread/INFO] (Minecraft) Created: 256x256x4 minecraft:textures/atlas/chest.png-atlas
+[10:57:15] [Render thread/INFO] (Minecraft) Created: 512x256x4 minecraft:textures/atlas/beds.png-atlas
+[10:57:15] [Render thread/INFO] (Minecraft) Created: 512x256x4 minecraft:textures/atlas/shulker_boxes.png-atlas
+[10:57:15] [Render thread/INFO] (Minecraft) Created: 512x256x0 minecraft:textures/atlas/particles.png-atlas
+[10:57:15] [Render thread/INFO] (Minecraft) Created: 512x256x0 minecraft:textures/atlas/paintings.png-atlas
+[10:57:15] [Render thread/INFO] (Minecraft) Created: 256x128x0 minecraft:textures/atlas/mob_effects.png-atlas
+[10:57:15] [Render thread/INFO] (Minecraft) Created: 64x64x0 minecraft:textures/atlas/map_decorations.png-atlas
+[10:57:15] [Render thread/INFO] (Minecraft) Created: 1024x512x0 minecraft:textures/atlas/gui.png-atlas
+[10:57:15] [Render thread/WARN] (Minecraft) Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2 in the specified shader program.
+[10:57:15] [Render thread/INFO] (Minecraft) Connecting to localhost, 25564
+[10:57:16] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Initializing voxy instance
+[10:57:16] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Dedicated voxy thread pool size: 8
+[10:57:16] [Render thread/INFO] (Iris) Reloading pipeline on dimension change: null => minecraft:overworld
+[10:57:16] [Render thread/INFO] (Iris) Creating pipeline for dimension minecraft:overworld
+[10:57:16] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Creating new world engine: 8839824707307977922@617383536
+[10:57:17] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.VoxyRenderSystem]: Creating Voxy render system
+[10:57:17] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.ml.by.Gl41OffscreenModelTextureBakery]: GL41 offscreen model bakery active
+[10:57:17] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalTerrainResources]: Created GL41Metal Metal LOD/culling worklist resources
+[10:57:17] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalRenderBackend]: Created Voxy GL41Metal shared texture backend with Metal LOD/culling and quad raster.
+[10:57:17] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.VoxyRenderSystem]: Voxy render system created with backend 'GL41METAL'
+[10:57:17] [Render thread/INFO] (ChunkBuilder) Started 6 worker threads
+[10:57:17] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Dedicated voxy thread pool size: 2
+[10:57:17] [Render thread/INFO] (Minecraft) Loaded 11 advancements
+[10:57:17] [Render thread/INFO] (Minecraft) [STDOUT]: Lithium Cached BlockState Flags are disabled!
+[10:57:17] [Render thread/INFO] (voxyworldgenv2) uploaded 20 known LOD regions for minecraft:overworld in 1 packet(s)
+[10:57:17] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalRenderBackend]: Voxy GL41Metal shared gbuffer initialized: device=Apple M2 Max, target=0x84f5, slots=3, size=1708x960, formats=gbuffer0=RGBA32F(uv+tile),gbuffer1=RGBA32F(depth+ids),gbuffer2=RGBA32F(packed albedo/light/tint/face/flags/coverage)
+2026-08-18 10:57:17.786 java[65801:1040780] GL41Metal opaque mesh pipeline created (batch=32)
+2026-08-18 10:57:17.786 java[65801:1040780] GL41Metal translucent mesh pipeline created (batch=32)
+2026-08-18 10:57:17.787 java[65801:1040780] GL41Metal distant SSAO pipeline created
+[10:57:17] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalTerrainResources]: GL41Metal terrain native resources initialized: maxSections=262144, geometryCapacity=1073741824, maxNodes=2097152, traversalQueue=200000, traversalRequests=1024, worklistItems=400000, rasterQuads=8000000, atlas=12288x8192 mips=4, atlasUploads=enabled
+[10:57:17] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal model fallback invisible for Block{minecraft:air} as opaque model 0
+[10:57:17] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal material store uploaded first model 0
+[10:57:18] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.GlDistantTerrainBridge]: Voxy GL41Metal distant terrain bridge sampled shared textures (vanilla built-in)
+[10:57:18] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.GlDistantTerrainBridge]: Voxy GL41Metal distant translucent bridge composited shared water textures (vanilla built-in water)
+[10:57:18] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalTerrainResources]: GL41Metal terrain Metal validation passed: resident=1, geometryBytes=1880, uploadedSections=1, removedSections=0, uploadedModels=1, uploadedBiomes=0, validationResident=1, validationQuads=235, validationModels=0, missingModels=4, invalidOffsets=0, invalidModelIds=0, topNodes=79, uploadedNodes=79, traversalVisited=0, worklist=0, requests=0, emittedRequests=0, traversalQuads=0, rasterInputQuads=0, rasterProcessedQuads=0, rasterOpaqueQuads=0, rasterSkippedQuads=0, rasterPixels=0, rasterMissingModels=0, rasterClippedQuads=0
+UNSUPPORTED (log once): gldCopyBufferSubData: NEEDS IMPLEMENTATION
+[10:57:18] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal model fallback invisible for Block{minecraft:bubble_column}[drag=true] as translucent model 78
+[10:57:18] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal model fallback no_quads for Block{minecraft:chest}[facing=north,type=single,waterlogged=false] as opaque model 216
+[10:57:19] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal model fallback no_quads for Block{minecraft:chest}[facing=west,type=single,waterlogged=true] as opaque model 374
+[10:57:19] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal model fallback no_quads for Block{minecraft:white_bed}[facing=north,occupied=false,part=foot] as cutout model 410
+[10:57:23] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2352ms]: avg tick=1.86 submit=1.33 wait=13.06 bound=0.08 opaqueGL=0.29 transGL=0.00 metalGPU=12.40 | voxyTotal=16.64 ms | max wait=14.99 opaqueGL=4.60 metalGPU=14.71
+[10:57:24] [Render thread/INFO] (voxyworldgenv2) voxy integration initialized (enabled: true, raw: true, voxyEnabled: true)
+[10:57:26] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalRenderBackend]: Voxy GL41Metal shared gbuffer resized: device=Apple M2 Max, target=0x84f5, slots=3, size=3840x2044, formats=gbuffer0=RGBA32F(uv+tile),gbuffer1=RGBA32F(depth+ids),gbuffer2=RGBA32F(packed albedo/light/tint/face/flags/coverage)
+[10:57:28] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 3115ms]: avg tick=0.49 submit=1.54 wait=16.71 bound=0.08 opaqueGL=0.37 transGL=0.00 metalGPU=16.32 | voxyTotal=19.17 ms | max wait=210.33 opaqueGL=16.71 metalGPU=209.72
+[10:57:29] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalRenderBackend]: Voxy GL41Metal shared gbuffer resized: device=Apple M2 Max, target=0x84f5, slots=3, size=1708x960, formats=gbuffer0=RGBA32F(uv+tile),gbuffer1=RGBA32F(depth+ids),gbuffer2=RGBA32F(packed albedo/light/tint/face/flags/coverage)
+[10:57:33] [Render thread/WARN] (Minecraft) Received passengers for unknown entity
+[10:57:34] [Render thread/INFO] (Iris) Destroying pipeline minecraft:overworld
+[10:57:34] [Render thread/INFO] (Iris) Shaders are disabled because enableShaders is set to false in iris.properties
+[10:57:34] [Render thread/INFO] (Iris) Creating pipeline for dimension minecraft:overworld
+[10:57:34] [Render thread/INFO] (Minecraft) [System] [CHAT] Shaders Reloaded!
+[10:57:36] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2426ms]: avg tick=0.52 submit=1.37 wait=14.07 bound=0.10 opaqueGL=0.27 transGL=0.00 metalGPU=12.55 | voxyTotal=16.34 ms | max wait=107.52 opaqueGL=0.51 metalGPU=14.87
+[10:57:42] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2208ms]: avg tick=0.45 submit=1.33 wait=13.03 bound=0.08 opaqueGL=0.31 transGL=0.00 metalGPU=12.42 | voxyTotal=15.22 ms | max wait=48.30 opaqueGL=8.53 metalGPU=48.15
+[10:57:49] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2283ms]: avg tick=0.46 submit=1.34 wait=13.77 bound=0.08 opaqueGL=0.24 transGL=0.00 metalGPU=13.12 | voxyTotal=15.90 ms | max wait=51.79 opaqueGL=0.36 metalGPU=51.13
+[10:57:56] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2117ms]: avg tick=0.43 submit=1.33 wait=12.39 bound=0.08 opaqueGL=0.44 transGL=0.00 metalGPU=11.77 | voxyTotal=14.68 ms | max wait=16.43 opaqueGL=23.73 metalGPU=15.73
+[10:58:02] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2124ms]: avg tick=0.46 submit=1.34 wait=12.03 bound=0.09 opaqueGL=0.25 transGL=0.00 metalGPU=11.45 | voxyTotal=14.17 ms | max wait=13.97 opaqueGL=0.38 metalGPU=13.34
+[10:58:03] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalRenderBackend]: Voxy GL41Metal shared gbuffer resized: device=Apple M2 Max, target=0x84f5, slots=3, size=3840x2044, formats=gbuffer0=RGBA32F(uv+tile),gbuffer1=RGBA32F(depth+ids),gbuffer2=RGBA32F(packed albedo/light/tint/face/flags/coverage)
+[10:58:07] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2296ms]: avg tick=0.58 submit=1.39 wait=13.37 bound=0.09 opaqueGL=0.25 transGL=0.00 metalGPU=12.98 | voxyTotal=15.68 ms | max wait=27.93 opaqueGL=0.32 metalGPU=27.54
+[10:58:13] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 1909ms]: avg tick=0.47 submit=1.39 wait=10.95 bound=0.07 opaqueGL=0.21 transGL=0.00 metalGPU=10.70 | voxyTotal=13.08 ms | max wait=29.31 opaqueGL=0.43 metalGPU=29.05
+[10:58:20] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2665ms]: avg tick=0.57 submit=1.43 wait=15.12 bound=0.10 opaqueGL=0.25 transGL=0.00 metalGPU=14.76 | voxyTotal=17.46 ms | max wait=38.83 opaqueGL=0.40 metalGPU=38.32
+[10:58:26] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2669ms]: avg tick=0.52 submit=1.41 wait=16.17 bound=0.07 opaqueGL=0.27 transGL=0.00 metalGPU=15.85 | voxyTotal=18.44 ms | max wait=39.19 opaqueGL=8.02 metalGPU=38.35
+[10:58:32] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 3106ms]: avg tick=0.55 submit=1.35 wait=18.46 bound=0.09 opaqueGL=0.24 transGL=0.00 metalGPU=18.08 | voxyTotal=20.69 ms | max wait=36.43 opaqueGL=0.33 metalGPU=35.67
+[10:58:37] [Render thread/INFO] (Iris) Destroying pipeline minecraft:overworld
+[10:58:37] [Render thread/INFO] (Iris) Shaders are disabled because enableShaders is set to false in iris.properties
+[10:58:37] [Render thread/INFO] (Iris) Creating pipeline for dimension minecraft:overworld
+[10:58:37] [Render thread/INFO] (Minecraft) [System] [CHAT] Shaders Reloaded!
+[10:58:37] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2740ms]: avg tick=0.51 submit=1.46 wait=16.08 bound=0.09 opaqueGL=0.26 transGL=0.00 metalGPU=15.81 | voxyTotal=18.41 ms | max wait=138.83 opaqueGL=1.00 metalGPU=138.18
+[10:58:39] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalRenderBackend]: Shutting down Voxy GL41Metal shared texture backend
+[10:58:39] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalRenderBackend]: Voxy GL41Metal slot stats: submitted=1740, sampledCurrent=1740, skippedCurrent=0, noFreeSlot=0, timeouts=0, retiring=0, maxWaitMs=154.399, waitTimeoutMs=0, waitMode=blocking-current
+[10:58:39] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.VoxyRenderSystem]: Render shutdown completed
+[10:58:39] [Render thread/INFO] (ChunkBuilder) Stopping worker threads
+[10:58:39] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Shutting down voxy instance
+[10:58:40] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Instance shutdown
+[10:58:47] [Render thread/INFO] (Minecraft) Connecting to localhost, 25564
+[10:58:47] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Initializing voxy instance
+[10:58:47] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Dedicated voxy thread pool size: 8
+[10:58:47] [Render thread/INFO] (Iris) Reloading pipeline on dimension change: null => minecraft:overworld
+[10:58:47] [Render thread/INFO] (Iris) Destroying pipeline minecraft:overworld
+[10:58:47] [Render thread/INFO] (Iris) Creating pipeline for dimension minecraft:overworld
+[10:58:47] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Creating new world engine: 8839824707307977922@1617398269
+[10:58:47] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.VoxyRenderSystem]: Creating Voxy render system
+[10:58:47] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.ml.by.Gl41OffscreenModelTextureBakery]: GL41 offscreen model bakery active
+[10:58:47] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalTerrainResources]: Created GL41Metal Metal LOD/culling worklist resources
+[10:58:47] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalRenderBackend]: Created Voxy GL41Metal shared texture backend with Metal LOD/culling and quad raster.
+[10:58:47] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.VoxyRenderSystem]: Voxy render system created with backend 'GL41METAL'
+[10:58:47] [Render thread/INFO] (ChunkBuilder) Started 6 worker threads
+[10:58:47] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Dedicated voxy thread pool size: 2
+[10:58:47] [Render thread/INFO] (Minecraft) Loaded 11 advancements
+[10:58:47] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalRenderBackend]: Voxy GL41Metal shared gbuffer initialized: device=Apple M2 Max, target=0x84f5, slots=3, size=3840x2044, formats=gbuffer0=RGBA32F(uv+tile),gbuffer1=RGBA32F(depth+ids),gbuffer2=RGBA32F(packed albedo/light/tint/face/flags/coverage)
+2026-08-18 10:58:47.936 java[65801:1040780] GL41Metal opaque mesh pipeline created (batch=32)
+2026-08-18 10:58:47.936 java[65801:1040780] GL41Metal translucent mesh pipeline created (batch=32)
+2026-08-18 10:58:47.936 java[65801:1040780] GL41Metal distant SSAO pipeline created
+[10:58:47] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalTerrainResources]: GL41Metal terrain native resources initialized: maxSections=262144, geometryCapacity=1073741824, maxNodes=2097152, traversalQueue=200000, traversalRequests=1024, worklistItems=400000, rasterQuads=8000000, atlas=12288x8192 mips=4, atlasUploads=enabled
+[10:58:47] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal model fallback invisible for Block{minecraft:air} as opaque model 0
+[10:58:47] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal material store uploaded first model 0
+[10:58:48] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.GlDistantTerrainBridge]: Voxy GL41Metal distant terrain bridge sampled shared textures (vanilla built-in)
+[10:58:48] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.GlDistantTerrainBridge]: Voxy GL41Metal distant translucent bridge composited shared water textures (vanilla built-in water)
+[10:58:48] [Render thread/INFO] (voxyworldgenv2) uploaded 23 known LOD regions for minecraft:overworld in 1 packet(s)
+[10:58:48] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalTerrainResources]: GL41Metal terrain Metal validation passed: resident=1, geometryBytes=1888, uploadedSections=1, removedSections=0, uploadedModels=1, uploadedBiomes=0, validationResident=1, validationQuads=236, validationModels=0, missingModels=4, invalidOffsets=0, invalidModelIds=0, topNodes=45, uploadedNodes=45, traversalVisited=0, worklist=0, requests=0, emittedRequests=0, traversalQuads=0, rasterInputQuads=0, rasterProcessedQuads=0, rasterOpaqueQuads=0, rasterSkippedQuads=0, rasterPixels=0, rasterMissingModels=0, rasterClippedQuads=0
+[10:58:48] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal model fallback invisible for Block{minecraft:bubble_column}[drag=true] as translucent model 108
+[10:58:48] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal model fallback no_quads for Block{minecraft:magenta_bed}[facing=west,occupied=false,part=foot] as cutout model 147
+[10:58:48] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal model fallback no_quads for Block{minecraft:chest}[facing=south,type=single,waterlogged=false] as opaque model 175
+[10:58:48] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal model fallback no_quads for Block{minecraft:chest}[facing=north,type=single,waterlogged=true] as opaque model 313
+[10:58:54] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2523ms]: avg tick=0.39 submit=1.48 wait=16.09 bound=0.05 opaqueGL=0.18 transGL=0.00 metalGPU=16.21 | voxyTotal=18.18 ms | max wait=40.40 opaqueGL=0.59 metalGPU=39.96
+[10:59:00] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 1931ms]: avg tick=0.55 submit=1.46 wait=11.37 bound=0.05 opaqueGL=0.18 transGL=0.00 metalGPU=11.25 | voxyTotal=13.60 ms | max wait=34.23 opaqueGL=0.30 metalGPU=33.49
+[10:59:06] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2041ms]: avg tick=0.46 submit=1.37 wait=11.78 bound=0.07 opaqueGL=0.20 transGL=0.00 metalGPU=11.41 | voxyTotal=13.89 ms | max wait=35.93 opaqueGL=0.34 metalGPU=35.18
+[10:59:13] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2505ms]: avg tick=0.55 submit=1.37 wait=15.15 bound=0.08 opaqueGL=0.23 transGL=0.00 metalGPU=14.86 | voxyTotal=17.38 ms | max wait=35.81 opaqueGL=0.63 metalGPU=35.16
+[10:59:17] [Render thread/INFO] (Minecraft) [System] [CHAT] generation §cdisabled§r
+[10:59:19] [Render thread/INFO] (Iris) Destroying pipeline minecraft:overworld
+[10:59:19] [Render thread/INFO] (Iris) Shaders are disabled because enableShaders is set to false in iris.properties
+[10:59:19] [Render thread/INFO] (Iris) Creating pipeline for dimension minecraft:overworld
+[10:59:19] [Render thread/INFO] (Minecraft) [System] [CHAT] Shaders Reloaded!
+[10:59:20] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2239ms]: avg tick=0.42 submit=1.41 wait=13.70 bound=0.07 opaqueGL=0.22 transGL=0.00 metalGPU=13.31 | voxyTotal=15.81 ms | max wait=40.60 opaqueGL=1.06 metalGPU=39.86
+[10:59:25] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 1897ms]: avg tick=0.36 submit=1.44 wait=11.37 bound=0.05 opaqueGL=0.18 transGL=0.00 metalGPU=11.06 | voxyTotal=13.40 ms | max wait=34.28 opaqueGL=0.29 metalGPU=34.11
+[10:59:27] [Render thread/INFO] (Minecraft) [System] [CHAT] generation §aenabled§r
+[10:59:28] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalRenderBackend]: Shutting down Voxy GL41Metal shared texture backend
+[10:59:28] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalRenderBackend]: Voxy GL41Metal slot stats: submitted=2211, sampledCurrent=2211, skippedCurrent=0, noFreeSlot=0, timeouts=0, retiring=0, maxWaitMs=113.441, waitTimeoutMs=0, waitMode=blocking-current
+[10:59:28] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.VoxyRenderSystem]: Render shutdown completed
+[10:59:28] [Render thread/INFO] (ChunkBuilder) Stopping worker threads
+[10:59:28] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Shutting down voxy instance
+[10:59:29] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Instance shutdown
+[10:59:32] [Render thread/INFO] (Minecraft) Loaded 1290 recipes
+[10:59:32] [Render thread/INFO] (Minecraft) Loaded 1399 advancements
+[10:59:32] [Render thread/WARN] (Minecraft) Not all defined tags for registry ResourceKey[minecraft:root / minecraft:item] are present in data pack: c:foods/dough, c:loom_patterns
+[10:59:34] [Render thread/INFO] (BiomeModificationImpl) Applied 0 biome modifications to 0 of 64 new biomes in 607.8 μs
+[10:59:34] [Server thread/INFO] (spark) Starting background profiler...
+[10:59:37] [Server thread/INFO] (Minecraft) Starting integrated minecraft server version 1.21.1
+[10:59:37] [Server thread/INFO] (Minecraft) Generating keypair
+[10:59:38] [Server thread/INFO] (Minecraft) Preparing start region for dimension minecraft:overworld
+[10:59:38] [Render thread/INFO] (Minecraft) Preparing spawn area: 2%
+[10:59:39] [Render thread/INFO] (Minecraft) Preparing spawn area: 2%
+[10:59:39] [Render thread/INFO] (Minecraft) Preparing spawn area: 18%
+[10:59:40] [Render thread/INFO] (Minecraft) Preparing spawn area: 51%
+[10:59:40] [Render thread/INFO] (Minecraft) Time elapsed: 1796 ms
+[10:59:40] [Server thread/WARN] (TranslationConventionLogWarnings) 
+	Dev warning - Untranslated Item Tags detected. Please translate your item tags so other mods such as recipe viewers can properly display your tag's name.
+	The format desired is tag.item.<namespace>.<path> for the translation key with slashes in path turned into periods.
+	To disable this message, set this system property in your runs: `-Dfabric-tag-conventions-v2.missingTagTranslationWarning=SILENCED`.
+	To see individual untranslated item tags found, set the system property to `-Dfabric-tag-conventions-v2.missingTagTranslationWarning=VERBOSE`.
+	Default is `SHORT`.
+
+[10:59:40] [Server thread/INFO] (voxyworldgenv2) server started, initializing manager
+[10:59:40] [Server thread/INFO] (voxyworldgenv2) voxy world gen initialized
+[10:59:40] [Server thread/INFO] (Minecraft) Changing view distance to 6, from 10
+[10:59:40] [Server thread/INFO] (Minecraft) Changing simulation distance to 12, from 0
+[10:59:40] [Server thread/INFO] (Minecraft) VoxyTester[local:E:c04055b4] logged in with entity id 936 at (4.5, 68.0, -6.5)
+[10:59:40] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Initializing voxy instance
+[10:59:40] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Dedicated voxy thread pool size: 8
+[10:59:40] [Server thread/INFO] (Minecraft) VoxyTester joined the game
+[10:59:40] [Render thread/INFO] (Iris) Reloading pipeline on dimension change: minecraft:overworld => minecraft:overworld
+[10:59:40] [Render thread/INFO] (Iris) Destroying pipeline minecraft:overworld
+[10:59:40] [Render thread/INFO] (Iris) Creating pipeline for dimension minecraft:overworld
+[10:59:40] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Creating new world engine: -1931010831406393313@1427209516
+[10:59:40] [Server thread/WARN] (voxyworldgenv2) tellus not found for sampling integration: com.yucareux.tellus.worldgen.EarthChunkGenerator
+[10:59:40] [Server thread/INFO] (voxyworldgenv2) voxy ingester initialized successfully (reflective)
+[10:59:40] [Server thread/INFO] (voxyworldgenv2) tellus integration hub initialized (6 workers)
+[10:59:40] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.VoxyRenderSystem]: Creating Voxy render system
+[10:59:40] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.ml.by.Gl41OffscreenModelTextureBakery]: GL41 offscreen model bakery active
+[10:59:40] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalTerrainResources]: Created GL41Metal Metal LOD/culling worklist resources
+[10:59:40] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalRenderBackend]: Created Voxy GL41Metal shared texture backend with Metal LOD/culling and quad raster.
+[10:59:40] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.VoxyRenderSystem]: Voxy render system created with backend 'GL41METAL'
+[10:59:40] [Render thread/INFO] (ChunkBuilder) Started 6 worker threads
+[10:59:41] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Dedicated voxy thread pool size: 2
+[10:59:41] [Render thread/INFO] (Minecraft) Loaded 2 advancements
+[10:59:41] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalRenderBackend]: Voxy GL41Metal shared gbuffer initialized: device=Apple M2 Max, target=0x84f5, slots=3, size=3840x2044, formats=gbuffer0=RGBA32F(uv+tile),gbuffer1=RGBA32F(depth+ids),gbuffer2=RGBA32F(packed albedo/light/tint/face/flags/coverage)
+2026-08-18 10:59:41.148 java[65801:1040780] GL41Metal opaque mesh pipeline created (batch=32)
+2026-08-18 10:59:41.149 java[65801:1040780] GL41Metal translucent mesh pipeline created (batch=32)
+2026-08-18 10:59:41.149 java[65801:1040780] GL41Metal distant SSAO pipeline created
+[10:59:41] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalTerrainResources]: GL41Metal terrain native resources initialized: maxSections=262144, geometryCapacity=1073741824, maxNodes=2097152, traversalQueue=200000, traversalRequests=1024, worklistItems=400000, rasterQuads=8000000, atlas=12288x8192 mips=4, atlasUploads=enabled
+[10:59:41] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal model fallback invisible for Block{minecraft:air} as opaque model 0
+[10:59:41] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal material store uploaded first model 0
+[10:59:41] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.GlDistantTerrainBridge]: Voxy GL41Metal distant terrain bridge sampled shared textures (vanilla built-in)
+[10:59:41] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.GlDistantTerrainBridge]: Voxy GL41Metal distant translucent bridge composited shared water textures (vanilla built-in water)
+[10:59:41] [Render thread/INFO] (voxyworldgenv2) uploaded 0 known LOD regions for minecraft:overworld in 1 packet(s)
+[10:59:41] [Server thread/INFO] (voxyworldgenv2) VoxyTester reports 0 known chunks in minecraft:overworld; skipping re-send
+[10:59:41] [Server thread/INFO] (Minecraft) Saving and pausing game...
+[10:59:41] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[10:59:41] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[10:59:41] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[10:59:41] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalTerrainResources]: GL41Metal terrain Metal validation passed: resident=3, geometryBytes=1480, uploadedSections=3, removedSections=0, uploadedModels=8, uploadedBiomes=4, validationResident=3, validationQuads=185, validationModels=9, missingModels=3, invalidOffsets=0, invalidModelIds=0, topNodes=120, uploadedNodes=124, traversalVisited=80, worklist=0, requests=32, emittedRequests=32, traversalQuads=0, rasterInputQuads=0, rasterProcessedQuads=0, rasterOpaqueQuads=0, rasterSkippedQuads=0, rasterPixels=0, rasterMissingModels=0, rasterClippedQuads=0
+[10:59:41] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal model fallback no_quads for Block{minecraft:chest}[facing=west,type=single,waterlogged=false] as opaque model 47
+[10:59:45] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal model fallback invisible for Block{minecraft:bubble_column}[drag=true] as translucent model 222
+[10:59:47] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 1403ms]: avg tick=0.82 submit=1.40 wait=5.46 bound=0.06 opaqueGL=0.21 transGL=0.00 metalGPU=4.90 | voxyTotal=7.96 ms | max wait=6.84 opaqueGL=0.46 metalGPU=6.23
+[10:59:50] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 495 done @ 101.7/s, 50849 remaining in radius (~8m 19s), 128 active, 640 skipped, 0 failed
+[10:59:53] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 1658ms]: avg tick=0.57 submit=1.41 wait=6.62 bound=0.04 opaqueGL=0.21 transGL=0.00 metalGPU=5.91 | voxyTotal=8.86 ms | max wait=12.70 opaqueGL=0.80 metalGPU=6.46
+[10:59:57] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal model fallback no_quads for Block{minecraft:brown_bed}[facing=west,occupied=false,part=head] as cutout model 365
+[10:59:58] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 1697ms]: avg tick=0.85 submit=1.35 wait=6.55 bound=0.05 opaqueGL=0.20 transGL=0.00 metalGPU=5.80 | voxyTotal=8.99 ms | max wait=11.66 opaqueGL=0.37 metalGPU=6.39
+[11:00:00] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 1204 done @ 178.6/s, 50140 remaining in radius (~4m 40s), 128 active, 1759 skipped, 0 failed
+[11:00:02] [Render thread/INFO] (Iris) Destroying pipeline minecraft:overworld
+[11:00:02] [Render thread/INFO] (Iris) Shaders are disabled because enableShaders is set to false in iris.properties
+[11:00:02] [Render thread/INFO] (Iris) Creating pipeline for dimension minecraft:overworld
+[11:00:02] [Render thread/INFO] (Minecraft) [System] [CHAT] Shaders Reloaded!
+[11:00:03] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 1749ms]: avg tick=0.51 submit=1.43 wait=7.31 bound=0.05 opaqueGL=0.21 transGL=0.00 metalGPU=6.64 | voxyTotal=9.50 ms | max wait=8.30 opaqueGL=0.81 metalGPU=7.52
+[11:00:09] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 1765ms]: avg tick=0.58 submit=1.37 wait=9.06 bound=0.08 opaqueGL=0.22 transGL=0.00 metalGPU=8.39 | voxyTotal=11.31 ms | max wait=17.24 opaqueGL=0.50 metalGPU=10.55
+[11:00:10] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 1858 done @ 180.0/s, 49486 remaining in radius (~4m 34s), 128 active, 2793 skipped, 0 failed
+[11:00:14] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 1805ms]: avg tick=0.54 submit=1.36 wait=9.97 bound=0.06 opaqueGL=0.20 transGL=0.00 metalGPU=9.48 | voxyTotal=12.14 ms | max wait=14.62 opaqueGL=0.30 metalGPU=10.65
+[11:00:20] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 1930ms]: avg tick=0.69 submit=1.37 wait=10.56 bound=0.06 opaqueGL=0.21 transGL=0.00 metalGPU=10.11 | voxyTotal=12.88 ms | max wait=11.72 opaqueGL=0.35 metalGPU=11.04
+[11:00:20] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 2561 done @ 149.9/s, 48783 remaining in radius (~5m 25s), 128 active, 3623 skipped, 0 failed
+[11:00:26] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2022ms]: avg tick=0.55 submit=1.34 wait=11.69 bound=0.07 opaqueGL=0.22 transGL=0.00 metalGPU=11.11 | voxyTotal=13.87 ms | max wait=17.75 opaqueGL=0.38 metalGPU=12.85
+[11:00:30] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 3396 done @ 190.3/s, 47948 remaining in radius (~4m 11s), 128 active, 4771 skipped, 0 failed
+[11:00:32] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2166ms]: avg tick=0.77 submit=1.39 wait=12.14 bound=0.08 opaqueGL=0.25 transGL=0.00 metalGPU=11.73 | voxyTotal=14.63 ms | max wait=13.38 opaqueGL=1.16 metalGPU=12.83
+[11:00:39] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2263ms]: avg tick=0.57 submit=1.42 wait=13.34 bound=0.09 opaqueGL=0.24 transGL=0.00 metalGPU=12.62 | voxyTotal=15.66 ms | max wait=32.20 opaqueGL=0.40 metalGPU=13.52
+[11:00:40] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 4171 done @ 192.1/s, 47173 remaining in radius (~4m 05s), 128 active, 5892 skipped, 0 failed
+[11:00:46] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2349ms]: avg tick=0.62 submit=1.38 wait=13.94 bound=0.08 opaqueGL=0.24 transGL=0.00 metalGPU=13.33 | voxyTotal=16.27 ms | max wait=22.26 opaqueGL=0.42 metalGPU=14.53
+[11:00:48] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalMaterialStore]: GL41Metal model fallback no_quads for Block{minecraft:chest}[facing=north,type=single,waterlogged=true] as opaque model 525
+[11:00:50] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 5014 done @ 200.4/s, 46330 remaining in radius (~3m 51s), 128 active, 7000 skipped, 0 failed
+[11:00:53] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2382ms]: avg tick=0.63 submit=1.38 wait=14.07 bound=0.08 opaqueGL=0.23 transGL=0.00 metalGPU=13.32 | voxyTotal=16.39 ms | max wait=25.06 opaqueGL=0.40 metalGPU=14.62
+[11:01:00] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 5844 done @ 163.9/s, 45500 remaining in radius (~4m 37s), 128 active, 7834 skipped, 0 failed
+[11:01:00] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2436ms]: avg tick=0.62 submit=1.55 wait=14.67 bound=0.07 opaqueGL=0.22 transGL=0.00 metalGPU=14.22 | voxyTotal=17.13 ms | max wait=19.56 opaqueGL=0.36 metalGPU=16.22
+[11:01:05] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2544ms]: avg tick=0.58 submit=1.38 wait=15.56 bound=0.08 opaqueGL=0.24 transGL=0.00 metalGPU=14.89 | voxyTotal=17.84 ms | max wait=28.92 opaqueGL=0.42 metalGPU=17.40
+[11:01:10] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 6685 done @ 173.0/s, 44659 remaining in radius (~4m 18s), 128 active, 8744 skipped, 0 failed
+[11:01:11] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2669ms]: avg tick=0.57 submit=1.39 wait=16.03 bound=0.09 opaqueGL=0.25 transGL=0.00 metalGPU=15.36 | voxyTotal=18.33 ms | max wait=34.38 opaqueGL=0.46 metalGPU=17.72
+[11:01:16] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2718ms]: avg tick=0.93 submit=1.38 wait=15.82 bound=0.09 opaqueGL=0.27 transGL=0.00 metalGPU=15.04 | voxyTotal=18.49 ms | max wait=44.14 opaqueGL=1.79 metalGPU=17.89
+[11:01:20] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 7465 done @ 215.0/s, 43879 remaining in radius (~3m 24s), 128 active, 10150 skipped, 0 failed
+[11:01:21] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2584ms]: avg tick=0.60 submit=1.35 wait=15.21 bound=0.08 opaqueGL=0.24 transGL=0.00 metalGPU=14.24 | voxyTotal=17.48 ms | max wait=43.58 opaqueGL=0.50 metalGPU=24.90
+[11:01:29] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2949ms]: avg tick=0.64 submit=1.41 wait=18.82 bound=0.09 opaqueGL=0.34 transGL=0.00 metalGPU=17.46 | voxyTotal=21.31 ms | max wait=71.07 opaqueGL=8.08 metalGPU=20.24
+[11:01:30] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 8292 done @ 188.2/s, 43052 remaining in radius (~3m 48s), 128 active, 11192 skipped, 0 failed
+[11:01:35] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 3169ms]: avg tick=0.81 submit=1.44 wait=19.90 bound=0.10 opaqueGL=0.32 transGL=0.00 metalGPU=18.50 | voxyTotal=22.57 ms | max wait=108.41 opaqueGL=5.70 metalGPU=21.22
+[11:01:40] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 8939 done @ 165.7/s, 42405 remaining in radius (~4m 15s), 128 active, 12194 skipped, 0 failed
+[11:01:41] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 3235ms]: avg tick=0.66 submit=1.58 wait=20.43 bound=0.11 opaqueGL=0.28 transGL=0.00 metalGPU=18.84 | voxyTotal=23.06 ms | max wait=137.68 opaqueGL=0.40 metalGPU=61.15
+[11:01:46] [Server thread/INFO] (voxyworldgenv2) VoxyTester applied 1 settings change(s) via the settings screen
+[11:01:47] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 3220ms]: avg tick=0.78 submit=1.46 wait=20.64 bound=0.10 opaqueGL=0.33 transGL=0.00 metalGPU=19.07 | voxyTotal=23.31 ms | max wait=130.38 opaqueGL=3.82 metalGPU=23.99
+[11:01:50] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 9653 done @ 172.2/s, 41691 remaining in radius (~4m 02s), 128 active, 13209 skipped, 0 failed
+[11:01:53] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2167ms]: avg tick=0.71 submit=1.40 wait=12.94 bound=0.07 opaqueGL=0.23 transGL=0.00 metalGPU=11.57 | voxyTotal=15.34 ms | max wait=132.16 opaqueGL=0.37 metalGPU=20.21
+[11:01:57] [Render thread/INFO] (Minecraft) [System] [CHAT] tab HUD §aon§r - hold Tab to see live worldgen info (/voxygen log to hide)
+[11:01:58] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 3420ms]: avg tick=0.54 submit=1.53 wait=22.56 bound=0.10 opaqueGL=0.27 transGL=0.00 metalGPU=19.18 | voxyTotal=25.00 ms | max wait=356.97 opaqueGL=0.42 metalGPU=24.95
+[11:02:00] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 10293 done @ 158.9/s, 41051 remaining in radius (~4m 18s), 128 active, 14159 skipped, 0 failed
+[11:02:04] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 3192ms]: avg tick=0.74 submit=1.47 wait=20.89 bound=0.09 opaqueGL=0.26 transGL=0.00 metalGPU=19.90 | voxyTotal=23.45 ms | max wait=58.91 opaqueGL=0.38 metalGPU=21.92
+[11:02:10] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 11079 done @ 187.0/s, 40265 remaining in radius (~3m 35s), 128 active, 15248 skipped, 0 failed
+[11:02:11] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 3330ms]: avg tick=0.76 submit=1.44 wait=21.78 bound=0.09 opaqueGL=0.27 transGL=0.00 metalGPU=20.44 | voxyTotal=24.35 ms | max wait=99.29 opaqueGL=0.95 metalGPU=23.75
+[11:02:17] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2562ms]: avg tick=0.72 submit=1.44 wait=16.06 bound=0.09 opaqueGL=0.24 transGL=0.00 metalGPU=15.23 | voxyTotal=18.54 ms | max wait=64.78 opaqueGL=0.50 metalGPU=64.48
+[11:02:20] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 11794 done @ 186.8/s, 39550 remaining in radius (~3m 31s), 128 active, 16469 skipped, 0 failed
+[11:02:24] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2586ms]: avg tick=0.61 submit=1.48 wait=16.02 bound=0.10 opaqueGL=0.25 transGL=0.00 metalGPU=14.88 | voxyTotal=18.45 ms | max wait=94.32 opaqueGL=0.40 metalGPU=52.60
+[11:02:30] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 12552 done @ 186.9/s, 38792 remaining in radius (~3m 27s), 128 active, 17541 skipped, 0 failed
+[11:02:31] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2333ms]: avg tick=0.56 submit=1.45 wait=13.83 bound=0.11 opaqueGL=0.24 transGL=0.00 metalGPU=13.38 | voxyTotal=16.19 ms | max wait=35.94 opaqueGL=0.37 metalGPU=35.19
+[11:02:38] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2894ms]: avg tick=0.53 submit=1.46 wait=18.54 bound=0.09 opaqueGL=0.25 transGL=0.00 metalGPU=14.68 | voxyTotal=20.88 ms | max wait=405.44 opaqueGL=0.46 metalGPU=37.38
+[11:02:40] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 13148 done @ 163.8/s, 38196 remaining in radius (~3m 53s), 128 active, 18525 skipped, 0 failed
+[11:02:45] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2094ms]: avg tick=0.57 submit=1.47 wait=12.27 bound=0.10 opaqueGL=0.24 transGL=0.00 metalGPU=11.98 | voxyTotal=14.64 ms | max wait=30.81 opaqueGL=0.44 metalGPU=30.53
+[11:02:50] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 13872 done @ 158.9/s, 37472 remaining in radius (~3m 55s), 128 active, 19425 skipped, 0 failed
+[11:02:52] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2190ms]: avg tick=0.51 submit=1.45 wait=13.28 bound=0.08 opaqueGL=0.23 transGL=0.00 metalGPU=12.76 | voxyTotal=15.55 ms | max wait=25.69 opaqueGL=0.38 metalGPU=25.36
+[11:03:00] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalFrameProfiler]: GL41Metal perf [120 frames / 2635ms]: avg tick=0.51 submit=1.47 wait=16.42 bound=0.09 opaqueGL=0.25 transGL=0.00 metalGPU=15.82 | voxyTotal=18.74 ms | max wait=42.88 opaqueGL=0.86 metalGPU=42.49
+[11:03:01] [Server thread/INFO] (voxyworldgenv2) generating [minecraft:overworld]: 14568 done @ 185.2/s, 36776 remaining in radius (~3m 18s), 128 active, 20584 skipped, 0 failed
+[11:03:01] [Render thread/INFO] (Minecraft) Stopping!
+[11:03:01] [Server thread/INFO] (Minecraft) VoxyTester lost connection: Internal Exception: java.nio.channels.ClosedChannelException
+[11:03:01] [Server thread/INFO] (Minecraft) VoxyTester left the game
+[11:03:01] [Server thread/INFO] (Minecraft) Stopping singleplayer server as player logged out
+[11:03:01] [Server thread/INFO] (voxyworldgenv2) server stopping, shutting down manager
+[11:03:01] [Server thread/INFO] (voxyworldgenv2) tellus integration shutdown
+[11:03:01] [Server thread/INFO] (Minecraft) Stopping server
+[11:03:01] [Server thread/INFO] (Minecraft) Saving players
+[11:03:01] [Server thread/INFO] (Minecraft) Saving worlds
+[11:03:10] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[New World]'/minecraft:overworld
+[11:03:24] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[New World]'/minecraft:the_nether
+[11:03:24] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[New World]'/minecraft:the_end
+[11:03:24] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (New World): All chunks are saved
+[11:03:24] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[11:03:24] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[11:03:24] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage: All dimensions are saved
+[11:03:24] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalRenderBackend]: Shutting down Voxy GL41Metal shared texture backend
+[11:03:24] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.rg.bd.gl.Gl41MetalRenderBackend]: Voxy GL41Metal slot stats: submitted=10380, sampledCurrent=10380, skippedCurrent=0, noFreeSlot=0, timeouts=0, retiring=0, maxWaitMs=405.435, waitTimeoutMs=0, waitMode=blocking-current
+[11:03:24] [Render thread/INFO] (Voxy) [me.cx.vy.ct.ce.VoxyRenderSystem]: Render shutdown completed
+[11:03:24] [Render thread/INFO] (ChunkBuilder) Stopping worker threads
+[11:03:24] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Shutting down voxy instance
+[11:03:25] [Render thread/INFO] (Voxy) [me.cx.vy.cl.VoxyInstance]: Instance shutdown
+
+BUILD SUCCESSFUL in 6m 24s
+9 actionable tasks: 2 executed, 7 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.4.1/userguide/configuration_cache_enabling.html

@@ -321,6 +321,13 @@ final class GlDistantTerrainBridge implements AutoCloseable {
   // (e.g. water behind stained glass). The front surface is pack-shaded (step 3), then this pass
   // subtracts the front surface's flat contribution from tgbufferAccum and blends the remainder
   // with premultiplied OVER. Single-layer cases (ocean surface) discard (behind==0) and are no-ops.
+  // Reprojection state for the composite being rendered right now, set by the backend per
+  // sampled slot (see Gl41MetalRenderBackend.sampleFrame). Disabled = identity mapping.
+  private final Matrix4f reprojMvp = new Matrix4f();
+  private final Matrix4f reprojMvpInv = new Matrix4f();
+  private boolean reprojEnabled;
+  private boolean reprojRefineEnabled;
+
   private Shader behindLayersProgram;
   private int behindLayersTgb0Uniform = -1;
   private int behindLayersTgb1Uniform = -1;
@@ -786,6 +793,7 @@ final class GlDistantTerrainBridge implements AutoCloseable {
           org.lwjgl.opengl.GL11C.GL_ONE,
           org.lwjgl.opengl.GL11C.GL_ONE_MINUS_SRC_ALPHA);
       behindShader.bind();
+      this.uploadReprojection(behindShader.id());
       glUniform1i(this.behindLayersTgb0Uniform, GBUFFER0_TEXTURE_UNIT);
       glUniform1i(this.behindLayersTgb1Uniform, GBUFFER1_TEXTURE_UNIT);
       glUniform1i(this.behindLayersAccumUniform, GBUFFER2_TEXTURE_UNIT);
@@ -830,6 +838,7 @@ final class GlDistantTerrainBridge implements AutoCloseable {
       glDisable(GL_BLEND);
 
       depthWriteShader.bind();
+      this.uploadReprojection(depthWriteShader.id());
       glUniform1i(this.translucentDepthTgbuffer1Uniform, GBUFFER1_TEXTURE_UNIT);
       glUniform2f(this.translucentDepthSharedSizeUniform, slot.width(), slot.height());
       glUniform2f(this.translucentDepthTargetSizeUniform, job.outputWidth(), job.outputHeight());
@@ -860,6 +869,7 @@ final class GlDistantTerrainBridge implements AutoCloseable {
       boolean reverseDepth,
       boolean vanilla) {
     colorProgram.shader().bind();
+    this.uploadReprojection(colorProgram.shader().id());
     glUniform1i(colorProgram.tgbuffer0TexUniform(), GBUFFER0_TEXTURE_UNIT);
     glUniform1i(colorProgram.tgbuffer1TexUniform(), GBUFFER1_TEXTURE_UNIT);
     if (colorProgram.lightmapTexUniform() >= 0) {
@@ -1105,6 +1115,52 @@ final class GlDistantTerrainBridge implements AutoCloseable {
     return true;
   }
 
+  /** Set before render/renderTranslucent; null disables (the sampled slot is this frame's). */
+  void setReprojection(Matrix4fc reproj, Matrix4fc reprojInv, boolean refine) {
+    if (reproj == null || reprojInv == null) {
+      this.reprojEnabled = false;
+      return;
+    }
+    this.reprojMvp.set(reproj);
+    this.reprojMvpInv.set(reprojInv);
+    this.reprojEnabled = true;
+    this.reprojRefineEnabled = refine;
+  }
+
+  /**
+   * Uploads the reprojection uniforms to whatever slot-sampling program is currently bound. The
+   * locations are looked up per bind: a location of -1 (uniform pruned or program without the
+   * block) is skipped, and uReprojEnabled defaults to 0 in GL so unbound programs stay identity.
+   */
+  private void uploadReprojection(int programId) {
+    int enabledLocation = glGetUniformLocation(programId, "uReprojEnabled");
+    if (enabledLocation < 0) {
+      return;
+    }
+    glUniform1i(enabledLocation, this.reprojEnabled ? 1 : 0);
+    if (!this.reprojEnabled) {
+      return;
+    }
+    int refineLocation = glGetUniformLocation(programId, "uReprojRefine");
+    if (refineLocation >= 0) {
+      glUniform1i(refineLocation, this.reprojRefineEnabled ? 1 : 0);
+    }
+    try (MemoryStack stack = MemoryStack.stackPush()) {
+      int mvpLocation = glGetUniformLocation(programId, "uReprojMvp");
+      if (mvpLocation >= 0) {
+        FloatBuffer buffer = stack.mallocFloat(16);
+        this.reprojMvp.get(buffer);
+        glUniformMatrix4fv(mvpLocation, false, buffer);
+      }
+      int invLocation = glGetUniformLocation(programId, "uReprojMvpInv");
+      if (invLocation >= 0) {
+        FloatBuffer buffer = stack.mallocFloat(16);
+        this.reprojMvpInv.get(buffer);
+        glUniformMatrix4fv(invLocation, false, buffer);
+      }
+    }
+  }
+
   /** gbuffer0-2 sampler units + reconstruction sizes + matrices shared by every pass. */
   private void setReconstructionUniforms(
       MemoryStack stack,
@@ -1124,6 +1180,7 @@ final class GlDistantTerrainBridge implements AutoCloseable {
     matrixBuffer.clear();
     vanillaMvp.get(matrixBuffer);
     glUniformMatrix4fv(program.vanillaMvpUniform(), false, matrixBuffer);
+    this.uploadReprojection(program.shader().id());
   }
 
   /**
@@ -1543,6 +1600,71 @@ final class GlDistantTerrainBridge implements AutoCloseable {
         return vec2(shared.x, uSharedSize.y - shared.y);
       }
 
+      uniform mat4 uReprojMvp;
+      uniform mat4 uReprojMvpInv;
+      uniform int uReprojEnabled;
+      bool vxReprojOob = false;
+      vec2 vxSrcPixel = vec2(0.0);
+
+      // Reprojection (stale-slot compositing): maps a CURRENT-frame pixel to the pixel in the
+      // slot gbuffer where the same world content lives. Far-plane mapping: exact for camera
+      // rotation; the translation residual shrinks with distance, and distant LOD terrain is
+      // exactly that. uReprojEnabled is 0 when the sampled slot was rasterized THIS frame - the
+      // mapping is then the identity and none of this runs.
+      vec2 reprojTargetPixel(vec2 targetPixel) {
+        if (uReprojEnabled == 0) {
+          return targetPixel;
+        }
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec4 s = uReprojMvp * vec4((targetPixel / ts) * 2.0 - 1.0, 1.0, 1.0);
+        if (s.w <= 0.0) {
+          vxReprojOob = true;
+          return targetPixel;
+        }
+        vec2 uv = (s.xy / s.w) * 0.5 + 0.5;
+        if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+          vxReprojOob = true;
+          return targetPixel;
+        }
+        return uv * ts;
+      }
+
+      // Re-expresses a slot-space Voxy-NDC depth in the CURRENT frame's Voxy NDC, so depth
+      // outputs from a stale slot stay consistent with this frame's projection helpers.
+      float slotDepthToCurrent(vec2 slotPixel, float slotDepth) {
+        if (uReprojEnabled == 0) {
+          return slotDepth;
+        }
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec4 c = uReprojMvpInv * vec4(vec3(slotPixel / ts, slotDepth) * 2.0 - 1.0, 1.0);
+        if (c.w <= 0.0) {
+          return slotDepth;
+        }
+        return clamp((c.z / c.w) * 0.5 + 0.5, 0.0, 1.0);
+      }
+
+      // Second warp iteration: with the slot depth found at the first (far-plane) guess, redo
+      // the mapping at that surface's actual depth. Corrects the camera-translation residual on
+      // nearer LODs; a no-op for far terrain where the far-plane guess was already right.
+      uniform int uReprojRefine;
+      vec2 reprojRefine(vec2 targetPixel, vec2 firstGuess, float slotDepthAtGuess) {
+        if (uReprojEnabled == 0 || uReprojRefine == 0) {
+          return firstGuess;
+        }
+        float zCur = slotDepthToCurrent(firstGuess, slotDepthAtGuess) * 2.0 - 1.0;
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec4 s = uReprojMvp * vec4((targetPixel / ts) * 2.0 - 1.0, zCur, 1.0);
+        if (s.w <= 0.0) {
+          return firstGuess;
+        }
+        vec2 uv = (s.xy / s.w) * 0.5 + 0.5;
+        if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+          vxReprojOob = true;
+          return firstGuess;
+        }
+        return uv * ts;
+      }
+
       // gl_FragCoord.z override for the full-screen-quad bridge.
       //
       // GL46 voxy renders the distant LOD as real per-triangle geometry, so a shader pack's
@@ -1709,6 +1831,71 @@ final class GlDistantTerrainBridge implements AutoCloseable {
         return vec2(shared.x, uSharedSize.y - shared.y);
       }
 
+      uniform mat4 uReprojMvp;
+      uniform mat4 uReprojMvpInv;
+      uniform int uReprojEnabled;
+      bool vxReprojOob = false;
+      vec2 vxSrcPixel = vec2(0.0);
+
+      // Reprojection (stale-slot compositing): maps a CURRENT-frame pixel to the pixel in the
+      // slot gbuffer where the same world content lives. Far-plane mapping: exact for camera
+      // rotation; the translation residual shrinks with distance, and distant LOD terrain is
+      // exactly that. uReprojEnabled is 0 when the sampled slot was rasterized THIS frame - the
+      // mapping is then the identity and none of this runs.
+      vec2 reprojTargetPixel(vec2 targetPixel) {
+        if (uReprojEnabled == 0) {
+          return targetPixel;
+        }
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec4 s = uReprojMvp * vec4((targetPixel / ts) * 2.0 - 1.0, 1.0, 1.0);
+        if (s.w <= 0.0) {
+          vxReprojOob = true;
+          return targetPixel;
+        }
+        vec2 uv = (s.xy / s.w) * 0.5 + 0.5;
+        if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+          vxReprojOob = true;
+          return targetPixel;
+        }
+        return uv * ts;
+      }
+
+      // Re-expresses a slot-space Voxy-NDC depth in the CURRENT frame's Voxy NDC, so depth
+      // outputs from a stale slot stay consistent with this frame's projection helpers.
+      float slotDepthToCurrent(vec2 slotPixel, float slotDepth) {
+        if (uReprojEnabled == 0) {
+          return slotDepth;
+        }
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec4 c = uReprojMvpInv * vec4(vec3(slotPixel / ts, slotDepth) * 2.0 - 1.0, 1.0);
+        if (c.w <= 0.0) {
+          return slotDepth;
+        }
+        return clamp((c.z / c.w) * 0.5 + 0.5, 0.0, 1.0);
+      }
+
+      // Second warp iteration: with the slot depth found at the first (far-plane) guess, redo
+      // the mapping at that surface's actual depth. Corrects the camera-translation residual on
+      // nearer LODs; a no-op for far terrain where the far-plane guess was already right.
+      uniform int uReprojRefine;
+      vec2 reprojRefine(vec2 targetPixel, vec2 firstGuess, float slotDepthAtGuess) {
+        if (uReprojEnabled == 0 || uReprojRefine == 0) {
+          return firstGuess;
+        }
+        float zCur = slotDepthToCurrent(firstGuess, slotDepthAtGuess) * 2.0 - 1.0;
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec4 s = uReprojMvp * vec4((targetPixel / ts) * 2.0 - 1.0, zCur, 1.0);
+        if (s.w <= 0.0) {
+          return firstGuess;
+        }
+        vec2 uv = (s.xy / s.w) * 0.5 + 0.5;
+        if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+          vxReprojOob = true;
+          return firstGuess;
+        }
+        return uv * ts;
+      }
+
       float faceTint(uint face) {
         if ((face >> 1u) == 1u) return 0.8;
         if ((face >> 1u) == 2u) return 0.6;
@@ -1717,7 +1904,9 @@ final class GlDistantTerrainBridge implements AutoCloseable {
       }
 
       void main() {
-        vec2 sp = sharedPixelForTarget(gl_FragCoord.xy);
+        vec2 srcPixel = reprojTargetPixel(gl_FragCoord.xy);
+        if (vxReprojOob) discard;
+        vec2 sp = sharedPixelForTarget(srcPixel);
         vec4 accum = texture(uTgbufferAccumTex, sp);
         if (accum.a <= 0.0) discard;
 
@@ -1730,7 +1919,7 @@ final class GlDistantTerrainBridge implements AutoCloseable {
 
         float depth = t1.x;
         if (depth <= 0.0 || depth >= 1.0) discard;
-        gl_FragDepth = depth;
+        gl_FragDepth = slotDepthToCurrent(srcPixel, depth);
 
         // Decode lightmap UV from tgbuffer0.y (Metal already applied the 15/16 + 0.5/16 transform).
         uint lightPacked = decodePackedUint(t0.y);
@@ -1777,10 +1966,77 @@ final class GlDistantTerrainBridge implements AutoCloseable {
         return vec2(shared.x, uSharedSize.y - shared.y);
       }
 
+      uniform mat4 uReprojMvp;
+      uniform mat4 uReprojMvpInv;
+      uniform int uReprojEnabled;
+      bool vxReprojOob = false;
+      vec2 vxSrcPixel = vec2(0.0);
+
+      // Reprojection (stale-slot compositing): maps a CURRENT-frame pixel to the pixel in the
+      // slot gbuffer where the same world content lives. Far-plane mapping: exact for camera
+      // rotation; the translation residual shrinks with distance, and distant LOD terrain is
+      // exactly that. uReprojEnabled is 0 when the sampled slot was rasterized THIS frame - the
+      // mapping is then the identity and none of this runs.
+      vec2 reprojTargetPixel(vec2 targetPixel) {
+        if (uReprojEnabled == 0) {
+          return targetPixel;
+        }
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec4 s = uReprojMvp * vec4((targetPixel / ts) * 2.0 - 1.0, 1.0, 1.0);
+        if (s.w <= 0.0) {
+          vxReprojOob = true;
+          return targetPixel;
+        }
+        vec2 uv = (s.xy / s.w) * 0.5 + 0.5;
+        if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+          vxReprojOob = true;
+          return targetPixel;
+        }
+        return uv * ts;
+      }
+
+      // Re-expresses a slot-space Voxy-NDC depth in the CURRENT frame's Voxy NDC, so depth
+      // outputs from a stale slot stay consistent with this frame's projection helpers.
+      float slotDepthToCurrent(vec2 slotPixel, float slotDepth) {
+        if (uReprojEnabled == 0) {
+          return slotDepth;
+        }
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec4 c = uReprojMvpInv * vec4(vec3(slotPixel / ts, slotDepth) * 2.0 - 1.0, 1.0);
+        if (c.w <= 0.0) {
+          return slotDepth;
+        }
+        return clamp((c.z / c.w) * 0.5 + 0.5, 0.0, 1.0);
+      }
+
+      // Second warp iteration: with the slot depth found at the first (far-plane) guess, redo
+      // the mapping at that surface's actual depth. Corrects the camera-translation residual on
+      // nearer LODs; a no-op for far terrain where the far-plane guess was already right.
+      uniform int uReprojRefine;
+      vec2 reprojRefine(vec2 targetPixel, vec2 firstGuess, float slotDepthAtGuess) {
+        if (uReprojEnabled == 0 || uReprojRefine == 0) {
+          return firstGuess;
+        }
+        float zCur = slotDepthToCurrent(firstGuess, slotDepthAtGuess) * 2.0 - 1.0;
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec4 s = uReprojMvp * vec4((targetPixel / ts) * 2.0 - 1.0, zCur, 1.0);
+        if (s.w <= 0.0) {
+          return firstGuess;
+        }
+        vec2 uv = (s.xy / s.w) * 0.5 + 0.5;
+        if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+          vxReprojOob = true;
+          return firstGuess;
+        }
+        return uv * ts;
+      }
+
       void main() {
-        float depth = texture(uTgbuffer1Tex, sharedPixelForTarget(gl_FragCoord.xy)).x;
+        vec2 srcPixel = reprojTargetPixel(gl_FragCoord.xy);
+        if (vxReprojOob) discard;
+        float depth = texture(uTgbuffer1Tex, sharedPixelForTarget(srcPixel)).x;
         if (depth <= 0.0 || depth >= 1.0) discard;
-        gl_FragDepth = depth;
+        gl_FragDepth = slotDepthToCurrent(srcPixel, depth);
       }
       """;
 
@@ -1807,6 +2063,71 @@ final class GlDistantTerrainBridge implements AutoCloseable {
       vec2 sharedPixelForTarget(vec2 targetPixel) {
         vec2 shared = targetPixel * (uSharedSize / max(uTargetSize, vec2(1.0)));
         return vec2(shared.x, uSharedSize.y - shared.y);
+      }
+
+      uniform mat4 uReprojMvp;
+      uniform mat4 uReprojMvpInv;
+      uniform int uReprojEnabled;
+      bool vxReprojOob = false;
+      vec2 vxSrcPixel = vec2(0.0);
+
+      // Reprojection (stale-slot compositing): maps a CURRENT-frame pixel to the pixel in the
+      // slot gbuffer where the same world content lives. Far-plane mapping: exact for camera
+      // rotation; the translation residual shrinks with distance, and distant LOD terrain is
+      // exactly that. uReprojEnabled is 0 when the sampled slot was rasterized THIS frame - the
+      // mapping is then the identity and none of this runs.
+      vec2 reprojTargetPixel(vec2 targetPixel) {
+        if (uReprojEnabled == 0) {
+          return targetPixel;
+        }
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec4 s = uReprojMvp * vec4((targetPixel / ts) * 2.0 - 1.0, 1.0, 1.0);
+        if (s.w <= 0.0) {
+          vxReprojOob = true;
+          return targetPixel;
+        }
+        vec2 uv = (s.xy / s.w) * 0.5 + 0.5;
+        if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+          vxReprojOob = true;
+          return targetPixel;
+        }
+        return uv * ts;
+      }
+
+      // Re-expresses a slot-space Voxy-NDC depth in the CURRENT frame's Voxy NDC, so depth
+      // outputs from a stale slot stay consistent with this frame's projection helpers.
+      float slotDepthToCurrent(vec2 slotPixel, float slotDepth) {
+        if (uReprojEnabled == 0) {
+          return slotDepth;
+        }
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec4 c = uReprojMvpInv * vec4(vec3(slotPixel / ts, slotDepth) * 2.0 - 1.0, 1.0);
+        if (c.w <= 0.0) {
+          return slotDepth;
+        }
+        return clamp((c.z / c.w) * 0.5 + 0.5, 0.0, 1.0);
+      }
+
+      // Second warp iteration: with the slot depth found at the first (far-plane) guess, redo
+      // the mapping at that surface's actual depth. Corrects the camera-translation residual on
+      // nearer LODs; a no-op for far terrain where the far-plane guess was already right.
+      uniform int uReprojRefine;
+      vec2 reprojRefine(vec2 targetPixel, vec2 firstGuess, float slotDepthAtGuess) {
+        if (uReprojEnabled == 0 || uReprojRefine == 0) {
+          return firstGuess;
+        }
+        float zCur = slotDepthToCurrent(firstGuess, slotDepthAtGuess) * 2.0 - 1.0;
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec4 s = uReprojMvp * vec4((targetPixel / ts) * 2.0 - 1.0, zCur, 1.0);
+        if (s.w <= 0.0) {
+          return firstGuess;
+        }
+        vec2 uv = (s.xy / s.w) * 0.5 + 0.5;
+        if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+          vxReprojOob = true;
+          return firstGuess;
+        }
+        return uv * ts;
       }
 
       void main() {
@@ -1862,24 +2183,39 @@ final class GlDistantTerrainBridge implements AutoCloseable {
     String maskBlock =
         includeNearMask
             ? "        float outputDepth =\n"
-                + "            projectDepth(rev3d(vec3(targetPixel / max(uTargetSize, vec2(1.0)),"
+                + "            projectDepth(rev3d(vec3(srcPixel / max(uTargetSize, vec2(1.0)),"
                 + " g.depth)));\n"
                 + "        if (isHiddenByNearDepth(targetPixel, outputDepth)) {\n"
                 + "          discard;\n"
                 + "        }\n"
             : "";
-    String fragDepth = includeNearMask ? "outputDepth" : "g.depth";
+    String fragDepth = includeNearMask ? "outputDepth" : "currentVoxyDepth";
     return """
 
       void main() {
         vec2 targetPixel = gl_FragCoord.xy;
-        vec2 sharedPixel = sharedPixelForTarget(targetPixel);
+        vec2 srcPixel = reprojTargetPixel(targetPixel);
+        if (vxReprojOob) {
+          discard;
+        }
+        if (uReprojEnabled != 0) {
+          float dGuess = clamp(texture(uGbuffer1Tex, sharedPixelForTarget(srcPixel)).x, 0.0, 1.0);
+          if (dGuess > 0.0 && dGuess < 1.0) {
+            srcPixel = reprojRefine(targetPixel, srcPixel, dGuess);
+            if (vxReprojOob) {
+              discard;
+            }
+          }
+        }
+        vxSrcPixel = srcPixel;
+        vec2 sharedPixel = sharedPixelForTarget(srcPixel);
         VoxyGbufferTexel g = sampleVoxyGbuffer(sharedPixel);
         if (g.coverage <= 0.0 || g.depth <= 0.0 || g.depth >= 1.0) {
           discard;
         }
+        float currentVoxyDepth = slotDepthToCurrent(srcPixel, g.depth);
 __VOXY_OPAQUE_MASK__        voxyQuadFlags = g.flags;
-        voxy_OverrideFragCoord = vec4(gl_FragCoord.xy, g.depth, gl_FragCoord.w);
+        voxy_OverrideFragCoord = vec4(gl_FragCoord.xy, currentVoxyDepth, gl_FragCoord.w);
         // parameters.tile/uv keep the GL46 split: tile = quad tile (uvTile.zw), uv = atlas uv.
         VoxyFragmentParameters parameters =
             VoxyFragmentParameters(
@@ -2007,6 +2343,71 @@ __VOXY_OPAQUE_MASK__        voxyQuadFlags = g.flags;
         return vec2(shared.x, uSharedSize.y - shared.y);
       }
 
+      uniform mat4 uReprojMvp;
+      uniform mat4 uReprojMvpInv;
+      uniform int uReprojEnabled;
+      bool vxReprojOob = false;
+      vec2 vxSrcPixel = vec2(0.0);
+
+      // Reprojection (stale-slot compositing): maps a CURRENT-frame pixel to the pixel in the
+      // slot gbuffer where the same world content lives. Far-plane mapping: exact for camera
+      // rotation; the translation residual shrinks with distance, and distant LOD terrain is
+      // exactly that. uReprojEnabled is 0 when the sampled slot was rasterized THIS frame - the
+      // mapping is then the identity and none of this runs.
+      vec2 reprojTargetPixel(vec2 targetPixel) {
+        if (uReprojEnabled == 0) {
+          return targetPixel;
+        }
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec4 s = uReprojMvp * vec4((targetPixel / ts) * 2.0 - 1.0, 1.0, 1.0);
+        if (s.w <= 0.0) {
+          vxReprojOob = true;
+          return targetPixel;
+        }
+        vec2 uv = (s.xy / s.w) * 0.5 + 0.5;
+        if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+          vxReprojOob = true;
+          return targetPixel;
+        }
+        return uv * ts;
+      }
+
+      // Re-expresses a slot-space Voxy-NDC depth in the CURRENT frame's Voxy NDC, so depth
+      // outputs from a stale slot stay consistent with this frame's projection helpers.
+      float slotDepthToCurrent(vec2 slotPixel, float slotDepth) {
+        if (uReprojEnabled == 0) {
+          return slotDepth;
+        }
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec4 c = uReprojMvpInv * vec4(vec3(slotPixel / ts, slotDepth) * 2.0 - 1.0, 1.0);
+        if (c.w <= 0.0) {
+          return slotDepth;
+        }
+        return clamp((c.z / c.w) * 0.5 + 0.5, 0.0, 1.0);
+      }
+
+      // Second warp iteration: with the slot depth found at the first (far-plane) guess, redo
+      // the mapping at that surface's actual depth. Corrects the camera-translation residual on
+      // nearer LODs; a no-op for far terrain where the far-plane guess was already right.
+      uniform int uReprojRefine;
+      vec2 reprojRefine(vec2 targetPixel, vec2 firstGuess, float slotDepthAtGuess) {
+        if (uReprojEnabled == 0 || uReprojRefine == 0) {
+          return firstGuess;
+        }
+        float zCur = slotDepthToCurrent(firstGuess, slotDepthAtGuess) * 2.0 - 1.0;
+        vec2 ts = max(uTargetSize, vec2(1.0));
+        vec4 s = uReprojMvp * vec4((targetPixel / ts) * 2.0 - 1.0, zCur, 1.0);
+        if (s.w <= 0.0) {
+          return firstGuess;
+        }
+        vec2 uv = (s.xy / s.w) * 0.5 + 0.5;
+        if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+          vxReprojOob = true;
+          return firstGuess;
+        }
+        return uv * ts;
+      }
+
       vec4 voxy_OverrideFragCoord;
       """;
 
@@ -2050,7 +2451,7 @@ __VOXY_OPAQUE_MASK__        voxyQuadFlags = g.flags;
         frontColor.rgb *= frontFaceShade;
         float frontAlpha = parameters.sampledColour.a;
 
-        vec2 sp = sharedPixelForTarget(gl_FragCoord.xy);
+        vec2 sp = sharedPixelForTarget(vxSrcPixel);
         vec4 accum = texture(uTgbufferAccumTex, sp);
         float bA = max(accum.a - frontAlpha, 0.0);
 
@@ -2101,26 +2502,40 @@ __VOXY_OPAQUE_MASK__        voxyQuadFlags = g.flags;
     // instead discards distant water wherever the near scene is loaded, so the two never co-occupy.
     String boundDiscard =
         vanilla
-            ? "        if (isInsideLoadedBound(targetPixel, g.depth)) {\n"
+            ? "        if (isInsideLoadedBound(srcPixel, g.depth)) {\n"
                 + "          discard;\n"
                 + "        }\n"
             : "";
     String tail =
         vanilla
             ? "        gl_FragDepth ="
-                + " projectDepth(rev3d(vec3(targetPixel / max(uTargetSize, vec2(1.0)), g.depth)));\n"
+                + " projectDepth(rev3d(vec3(srcPixel / max(uTargetSize, vec2(1.0)), g.depth)));\n"
             : "";
     return """
 
       void main() {
         vec2 targetPixel = gl_FragCoord.xy;
-        vec2 sharedPixel = sharedPixelForTarget(targetPixel);
+        vec2 srcPixel = reprojTargetPixel(targetPixel);
+        if (vxReprojOob) {
+          discard;
+        }
+        if (uReprojEnabled != 0) {
+          float dGuess = clamp(texture(uTgbuffer1Tex, sharedPixelForTarget(srcPixel)).x, 0.0, 1.0);
+          if (dGuess > 0.0 && dGuess < 1.0) {
+            srcPixel = reprojRefine(targetPixel, srcPixel, dGuess);
+            if (vxReprojOob) {
+              discard;
+            }
+          }
+        }
+        vxSrcPixel = srcPixel;
+        vec2 sharedPixel = sharedPixelForTarget(srcPixel);
         VoxyTranslucentTexel g = sampleVoxyTranslucent(sharedPixel);
         if (g.coverage <= 0.0 || g.depth <= 0.0 || g.depth >= 1.0 || g.alpha <= 0.0) {
           discard;
         }
 __VOXY_TRANSLUCENT_BOUND__        voxyQuadFlags = g.flags;
-        voxy_OverrideFragCoord = vec4(gl_FragCoord.xy, g.depth, gl_FragCoord.w);
+        voxy_OverrideFragCoord = vec4(gl_FragCoord.xy, slotDepthToCurrent(srcPixel, g.depth), gl_FragCoord.w);
         VoxyFragmentParameters parameters =
             VoxyFragmentParameters(
                 vec4(g.colour.rgb, g.alpha), g.tile, g.uv, int(g.face), g.modelId, g.lightMap,

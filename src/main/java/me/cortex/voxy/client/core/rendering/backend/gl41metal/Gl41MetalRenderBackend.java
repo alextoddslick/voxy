@@ -48,6 +48,51 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
   private int heldTranslucentSlot = -1;
   private Gl41MetalFrame heldTranslucentFrame;
   private RenderFrameContext heldTranslucentContext;
+  private final Matrix4f heldVoxyMvp = new Matrix4f();
+  private final Matrix4f heldVanillaMvp = new Matrix4f();
+  private boolean heldMvpValid;
+  private final Matrix4f heldReprojMvp = new Matrix4f();
+  private final Matrix4f heldReprojMvpInv = new Matrix4f();
+  private boolean heldReprojValid;
+
+  /**
+   * What each slot's gbuffer was rasterized with, captured at submit. When the scheduler samples a
+   * STALE slot (bounded wait expired), the composite reconstructs world positions with the slot's
+   * OWN matrices and re-projects them with the CURRENT frame's vanilla matrices — so an old frame
+   * lands exactly where its terrain belongs no matter how the camera moved since. Without this,
+   * stale composites were registered against the current camera and the LOD layer visibly slid
+   * with camera motion whenever Metal frames outlasted the wait.
+   */
+  private static final class SlotSubmitState {
+    final Matrix4f drawMvp = new Matrix4f();
+    double camX;
+    double camY;
+    double camZ;
+    int originX;
+    int originY;
+    int originZ;
+    long frameId = -1;
+    boolean valid;
+  }
+
+  private SlotSubmitState[] slotSubmitStates = new SlotSubmitState[0];
+  /** Newest Metal frame id observed COMPLETED (via sampling); -1 until the first completes. */
+  private long newestCompletedFrameId = -1;
+
+  private int countInFlightSubmits() {
+    int inFlight = 0;
+    for (SlotSubmitState state : this.slotSubmitStates) {
+      if (state.valid && state.frameId > this.newestCompletedFrameId) {
+        inFlight++;
+      }
+    }
+    return inFlight;
+  }
+
+  /** The camera-section origin (block coords) the frame matrices are relative to. */
+  private static int sectionOrigin(double cameraCoord) {
+    return (((int) Math.floor(cameraCoord)) >> 5) << 5;
+  }
 
   public Gl41MetalRenderBackend(BackendContext context) {
     this.context = context;
@@ -155,7 +200,18 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
             context.matrices().modelView(),
             frameMatrices.projection());
     long frameId = this.nextFrameId++;
-    int writeSlot = this.slotScheduler.acquireWriteSlot(this.gbuffer);
+    // Submit pacing: while the GPU already has enough Metal frames queued, skip this submit
+    // entirely. Reprojection makes the composite correct from an older frame anyway, and NOT
+    // queueing doomed work keeps the newest completed frame fresher and hands the spare GPU
+    // time to vanilla rendering.
+    int writeSlot;
+    if (this.config.maxInFlightSubmits() > 0
+        && this.countInFlightSubmits() >= this.config.maxInFlightSubmits()) {
+      this.slotScheduler.recordPacedSubmit();
+      writeSlot = -1;
+    } else {
+      writeSlot = this.slotScheduler.acquireWriteSlot(this.gbuffer);
+    }
 
     long tSubmit = this.profiler.begin();
     if (writeSlot >= 0) {
@@ -168,6 +224,18 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
           frameMatrices.drawMvp(),
           frameMatrices.projection());
       this.slotScheduler.recordSubmitted();
+      if (writeSlot < this.slotSubmitStates.length) {
+        SlotSubmitState state = this.slotSubmitStates[writeSlot];
+        state.drawMvp.set(frameMatrices.drawMvp());
+        state.camX = context.cameraX();
+        state.camY = context.cameraY();
+        state.camZ = context.cameraZ();
+        state.originX = sectionOrigin(context.cameraX());
+        state.originY = sectionOrigin(context.cameraY());
+        state.originZ = sectionOrigin(context.cameraZ());
+        state.frameId = frameId;
+        state.valid = true;
+      }
     } else {
       this.slotScheduler.recordNoFreeSlot();
     }
@@ -224,6 +292,54 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
           stageContext == null ? gl41MetalFrame.context() : stageContext;
       DistantGbufferSlot slot = this.gbuffer.slot(sampleSlot);
 
+      // Reprojection: composite the sampled slot in the space it was RASTERIZED in. voxyMvp
+      // reconstructs positions relative to the slot's camera-section origin; the current vanilla
+      // MVP is shifted by the exact integer origin delta so those positions re-project into the
+      // CURRENT frame. Sampling the current slot yields a zero delta — identical to the old path.
+      SlotSubmitState submitState =
+          sampleSlot < this.slotSubmitStates.length ? this.slotSubmitStates[sampleSlot] : null;
+      boolean reproject = submitState != null && submitState.valid;
+      if (reproject && submitState.frameId > this.newestCompletedFrameId) {
+        // Metal completes traversal frames in submission order, so everything at or before the
+        // sampled frame is done - this is what the submit pacing counts against.
+        this.newestCompletedFrameId = submitState.frameId;
+      }
+      Matrix4f voxyMvp =
+          reproject ? new Matrix4f(submitState.drawMvp) : new Matrix4f(gl41MetalFrame.drawMvp());
+      Matrix4f vanillaMvp = new Matrix4f(gl41MetalFrame.vanillaDrawMvp());
+      double boundCamX = renderContext.cameraX();
+      double boundCamY = renderContext.cameraY();
+      double boundCamZ = renderContext.cameraZ();
+      Matrix4f reprojMvp = null;
+      Matrix4f reprojMvpInv = null;
+      if (reproject) {
+        RenderFrameContext frameContext = gl41MetalFrame.context();
+        vanillaMvp.translate(
+            submitState.originX - sectionOrigin(frameContext.cameraX()),
+            submitState.originY - sectionOrigin(frameContext.cameraY()),
+            submitState.originZ - sectionOrigin(frameContext.cameraZ()));
+        // The loaded-volume bound must be rasterized in the SLOT's space too: the shader compares
+        // the slot's voxy-NDC depth against it (GLSL_BOUND_CLIP assumes one shared space).
+        boundCamX = submitState.camX;
+        boundCamY = submitState.camY;
+        boundCamZ = submitState.camZ;
+        // A STALE slot additionally needs the positional warp: the composite shader maps each
+        // current-frame pixel into the slot's screen space (current voxy NDC -> slot voxy NDC).
+        // R = slotDrawMvp * T(originCur - originSlot) * inverse(currentDrawMvp); identity (and
+        // skipped entirely) when the sampled slot was submitted this very frame.
+        if (submitState.frameId != gl41MetalFrame.frameId() && this.config.reprojection()) {
+          reprojMvp =
+              new Matrix4f(submitState.drawMvp)
+                  .translate(
+                      sectionOrigin(frameContext.cameraX()) - submitState.originX,
+                      sectionOrigin(frameContext.cameraY()) - submitState.originY,
+                      sectionOrigin(frameContext.cameraZ()) - submitState.originZ)
+                  .mul(new Matrix4f(gl41MetalFrame.drawMvp()).invert());
+          reprojMvpInv = reprojMvp.invert(new Matrix4f());
+        }
+      }
+      this.bridge.setReprojection(reprojMvp, reprojMvpInv, this.config.reprojRefine());
+
       long tBound = this.profiler.begin();
       int worldMinY = -64;
       int worldMaxY = 320;
@@ -235,10 +351,10 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
       int verticalRadiusBlocks = Minecraft.getInstance().options.getEffectiveRenderDistance() * 16;
       this.currentBound =
           this.boundRenderer.render(
-              gl41MetalFrame.drawMvp(),
-              renderContext.cameraX(),
-              renderContext.cameraY(),
-              renderContext.cameraZ(),
+              voxyMvp,
+              boundCamX,
+              boundCamY,
+              boundCamZ,
               worldMinY,
               worldMaxY,
               verticalRadiusBlocks,
@@ -254,13 +370,25 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
                   renderContext,
                   slot,
                   GlDistantTerrainBridge.irisJob(bridgePayload),
-                  gl41MetalFrame.drawMvp(),
-                  gl41MetalFrame.vanillaDrawMvp());
+                  voxyMvp,
+                  vanillaMvp);
           this.profiler.recordBridgeOpaque(tBridge);
           if (rendered && holdForTranslucent) {
             this.heldTranslucentSlot = sampleSlot;
             this.heldTranslucentFrame = gl41MetalFrame;
             this.heldTranslucentContext = renderContext;
+            // The translucent pass later this frame samples the SAME slot: reuse the exact
+            // matrices this composite used so both layers stay registered.
+            this.heldVoxyMvp.set(voxyMvp);
+            this.heldVanillaMvp.set(vanillaMvp);
+            this.heldMvpValid = true;
+            if (reprojMvp != null) {
+              this.heldReprojMvp.set(reprojMvp);
+              this.heldReprojMvpInv.set(reprojMvpInv);
+              this.heldReprojValid = true;
+            } else {
+              this.heldReprojValid = false;
+            }
             held = true;
           }
           return;
@@ -283,15 +411,15 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
           renderContext,
           slot,
           GlDistantTerrainBridge.vanillaJob(renderContext, this.config.visibleComposite()),
-          gl41MetalFrame.drawMvp(),
-          gl41MetalFrame.vanillaDrawMvp());
+          voxyMvp,
+          vanillaMvp);
       this.bridge.renderTranslucent(
           renderContext,
           slot,
           GlDistantTerrainBridge.vanillaTranslucentJob(
               renderContext, this.config.visibleComposite()),
-          gl41MetalFrame.drawMvp(),
-          gl41MetalFrame.vanillaDrawMvp(),
+          voxyMvp,
+          vanillaMvp,
           this.currentBound);
       this.profiler.recordBridgeOpaque(tBridge);
     } finally {
@@ -316,6 +444,10 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
         context.payload() instanceof ShaderPatchBridgePayload p ? p : null;
     long tTrans = this.profiler.begin();
     try {
+      this.bridge.setReprojection(
+          this.heldReprojValid ? this.heldReprojMvp : null,
+          this.heldReprojValid ? this.heldReprojMvpInv : null,
+          this.config.reprojRefine());
       if (payload != null && payload.strictBridgeAvailable()) {
         RenderFrameContext renderContext =
             context.frameContext() != null ? context.frameContext() : this.heldTranslucentContext;
@@ -323,8 +455,8 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
             renderContext,
             this.gbuffer.slot(slot),
             GlDistantTerrainBridge.translucentJob(payload),
-            this.heldTranslucentFrame.drawMvp(),
-            this.heldTranslucentFrame.vanillaDrawMvp(),
+            this.heldMvpValid ? this.heldVoxyMvp : this.heldTranslucentFrame.drawMvp(),
+            this.heldMvpValid ? this.heldVanillaMvp : this.heldTranslucentFrame.vanillaDrawMvp(),
             this.currentBound);
       } else if (payload != null
           && !payload.unavailableReason().isEmpty()
@@ -348,6 +480,7 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
     this.heldTranslucentSlot = -1;
     this.heldTranslucentFrame = null;
     this.heldTranslucentContext = null;
+    this.heldMvpValid = false;
   }
 
   /** Drops the held slot reference WITHOUT retiring it (used when the native slots are reset). */
@@ -355,6 +488,7 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
     this.heldTranslucentSlot = -1;
     this.heldTranslucentFrame = null;
     this.heldTranslucentContext = null;
+    this.heldMvpValid = false;
   }
 
   @Override
@@ -422,6 +556,15 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
     }
   }
 
+  private void resetSlotSubmitStates() {
+    // The native slots were forced back to Free, so every stored raster-space is stale.
+    this.slotSubmitStates = new SlotSubmitState[this.config.slotCount()];
+    for (int i = 0; i < this.slotSubmitStates.length; i++) {
+      this.slotSubmitStates[i] = new SlotSubmitState();
+    }
+    this.newestCompletedFrameId = -1;
+  }
+
   private void ensureGbuffer(int width, int height) {
     if (width <= 0 || height <= 0) {
       throw new IllegalArgumentException("Invalid GL41Metal viewport size " + width + "x" + height);
@@ -439,12 +582,14 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
       this.slotScheduler.closeRetiringSlots(this.gbuffer);
       this.gbuffer.resize(width, height);
       this.slotScheduler.reset();
+      this.resetSlotSubmitStates();
       Logger.info("Voxy GL41Metal shared gbuffer resized: " + this.gbuffer.description());
       return;
     }
     this.gbuffer =
         SharedDistantGbuffer.create(this.config.slotCount(), width, height);
     this.slotScheduler.reset();
+    this.resetSlotSubmitStates();
     Logger.info("Voxy GL41Metal shared gbuffer initialized: " + this.gbuffer.description());
   }
 }
