@@ -7,7 +7,8 @@ record Gl41MetalConfig(
     int meshBatchSize,
     boolean reprojection,
     boolean reprojRefine,
-    int maxInFlightSubmits) {
+    int maxInFlightSubmits,
+    int overscanPercent) {
   static Gl41MetalConfig fromSystemProperties() {
     return new Gl41MetalConfig(
         readInt("voxy.gl41metal.slotCount", 3, 2, 8),
@@ -26,7 +27,11 @@ record Gl41MetalConfig(
         // several frames per Metal pass just queues stale work and saturates the GPU; capping
         // keeps the newest completed frame FRESHER and hands the spare GPU time to vanilla.
         // 0 = uncapped (old behaviour).
-        readInt("voxy.gl41metal.maxInFlightSubmits", 2, 0, 8));
+        readInt("voxy.gl41metal.maxInFlightSubmits", 2, 0, 8),
+        // Extra FOV rendered past the screen edges (percent). Costs raster area but gives stale
+        // frames real content at the edges instead of blanks, and pre-refines LOD just outside
+        // the view. Only effective while reprojection is on (the warp is what reads the margin).
+        readInt("voxy.gl41metal.overscanPercent", 12, 0, 50));
   }
 
   private static boolean readBoolean(String property, boolean fallback) {

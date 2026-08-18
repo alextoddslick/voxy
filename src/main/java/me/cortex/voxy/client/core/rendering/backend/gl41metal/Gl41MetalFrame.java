@@ -10,7 +10,8 @@ record Gl41MetalFrame(
     long frameId,
     int writeSlot,
     Matrix4f drawMvp,
-    Matrix4f vanillaDrawMvp)
+    Matrix4f vanillaDrawMvp,
+    Matrix4f screenVoxyMvp)
     implements RenderFrame {
   @Override
   public RenderBackendId backendId() {

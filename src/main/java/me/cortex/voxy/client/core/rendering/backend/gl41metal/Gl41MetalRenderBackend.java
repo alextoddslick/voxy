@@ -199,15 +199,21 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
         this.loggedMissingMatrices = true;
         Logger.warn("GL41Metal skipped Metal submit because real frame matrices were unavailable");
       }
-      return new Gl41MetalFrame(context, this.nextFrameId++, -1, new Matrix4f(), new Matrix4f());
+      return new Gl41MetalFrame(
+          context, this.nextFrameId++, -1, new Matrix4f(), new Matrix4f(), new Matrix4f());
     }
+    float overscan =
+        this.config.reprojection() ? 1.0f + this.config.overscanPercent() / 100.0f : 1.0f;
     MetalDistantRenderer.FrameMatrices frameMatrices =
-        MetalDistantRenderer.computeFrameMatrices(context);
+        MetalDistantRenderer.computeFrameMatrices(context, overscan);
+    // Pack-facing matrices stay in SCREEN space: the bridge writes vxDepthTex* depths in the
+    // current screen voxy NDC, so a pack's vxProj/vxProjInv reconstruction must match that, not
+    // the overscanned raster projection.
     this.lastFrameMatrices =
         new RenderFrameMatrices(
-            frameMatrices.traversalMvp(),
+            new Matrix4f(frameMatrices.screenProjection()).mul(context.matrices().modelView()),
             context.matrices().modelView(),
-            frameMatrices.projection());
+            frameMatrices.screenProjection());
     long frameId = this.nextFrameId++;
     // Submit pacing: while the GPU already has enough Metal frames queued, skip this submit
     // entirely. Reprojection makes the composite correct from an older frame anyway, and NOT
@@ -251,7 +257,12 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
     this.profiler.recordMetalSubmit(tSubmit);
 
     return new Gl41MetalFrame(
-        context, frameId, writeSlot, frameMatrices.drawMvp(), frameMatrices.vanillaDrawMvp());
+        context,
+        frameId,
+        writeSlot,
+        frameMatrices.drawMvp(),
+        frameMatrices.vanillaDrawMvp(),
+        frameMatrices.screenDrawMvp());
   }
 
   @Override
@@ -345,18 +356,20 @@ public final class Gl41MetalRenderBackend implements VoxyRenderBackend {
         boundCamX = submitState.camX;
         boundCamY = submitState.camY;
         boundCamZ = submitState.camZ;
-        // A STALE slot additionally needs the positional warp: the composite shader maps each
-        // current-frame pixel into the slot's screen space (current voxy NDC -> slot voxy NDC).
-        // R = slotDrawMvp * T(originCur - originSlot) * inverse(currentDrawMvp); identity (and
-        // skipped entirely) when the sampled slot was submitted this very frame.
-        if (submitState.frameId != gl41MetalFrame.frameId() && this.config.reprojection()) {
+        // The positional warp maps each current SCREEN pixel into the slot's RASTER space:
+        // R = slotDrawMvp * T(originCur - originSlot) * inverse(currentScreenVoxyMvp). Needed
+        // whenever the slot is stale OR the raster is overscanned (then even the current frame's
+        // raster NDC differs from screen NDC); skipped only when both are identity.
+        boolean stale = submitState.frameId != gl41MetalFrame.frameId();
+        boolean overscanActive = this.config.overscanPercent() > 0;
+        if ((stale || overscanActive) && this.config.reprojection()) {
           reprojMvp =
               new Matrix4f(submitState.drawMvp)
                   .translate(
                       sectionOrigin(frameContext.cameraX()) - submitState.originX,
                       sectionOrigin(frameContext.cameraY()) - submitState.originY,
                       sectionOrigin(frameContext.cameraZ()) - submitState.originZ)
-                  .mul(new Matrix4f(gl41MetalFrame.drawMvp()).invert());
+                  .mul(new Matrix4f(gl41MetalFrame.screenVoxyMvp()).invert());
           reprojMvpInv = reprojMvp.invert(new Matrix4f());
         }
       }

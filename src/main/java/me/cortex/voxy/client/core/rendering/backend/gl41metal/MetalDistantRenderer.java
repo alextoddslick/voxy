@@ -104,19 +104,34 @@ final class MetalDistantRenderer {
    * helper rebuilding the projection (with its matrix inversion) and the traversal MVP from scratch
    * in both {@code submitMetalFrame} and {@code submitTraversal}.
    */
-  static FrameMatrices computeFrameMatrices(RenderFrameContext context) {
+  static FrameMatrices computeFrameMatrices(RenderFrameContext context, float overscan) {
     if (context.matrices() == null) {
-      return new FrameMatrices(new Matrix4f(), new Matrix4f(), new Matrix4f(), new Matrix4f());
+      return new FrameMatrices(
+          new Matrix4f(), new Matrix4f(), new Matrix4f(), new Matrix4f(),
+          new Matrix4f(), new Matrix4f());
     }
     Matrix4fc base = context.matrices().projection();
     Matrix4fc modelView = context.matrices().modelView();
-    Matrix4f projection = computeProjectionMat(base);
+    // The SCREEN voxy projection matches vanilla's FOV pixel-for-pixel; the raster projection may
+    // be OVERSCANNED (wider FOV) so Metal frames carry margin content past the screen edges. The
+    // composite's reprojection warp maps screen pixels into the overscanned frame, which is what
+    // removes the blank slivers at the edges when panning fast (stale frames now HAVE data there)
+    // and keeps traversal refinement warm just beyond the view, softening coarse-LOD pop on turns.
+    Matrix4f screenProjection = computeProjectionMat(base);
+    Matrix4f projection = new Matrix4f(screenProjection);
+    if (overscan > 1.0f) {
+      projection.m00(projection.m00() / overscan);
+      projection.m11(projection.m11() / overscan);
+    }
     Matrix4f traversalMvp = new Matrix4f(projection).mul(modelView);
     Matrix4f drawMvp = new Matrix4f(traversalMvp);
     translateByNegativeCameraSubSection(context, drawMvp);
+    Matrix4f screenDrawMvp = new Matrix4f(screenProjection).mul(modelView);
+    translateByNegativeCameraSubSection(context, screenDrawMvp);
     Matrix4f vanillaDrawMvp = new Matrix4f(base).mul(modelView);
     translateByNegativeCameraSubSection(context, vanillaDrawMvp);
-    return new FrameMatrices(projection, traversalMvp, drawMvp, vanillaDrawMvp);
+    return new FrameMatrices(
+        projection, traversalMvp, drawMvp, vanillaDrawMvp, screenProjection, screenDrawMvp);
   }
 
   private static void translateByNegativeCameraSubSection(
@@ -194,5 +209,10 @@ final class MetalDistantRenderer {
 
   /** All matrices a single GL41Metal frame needs, derived once from the frame context. */
   record FrameMatrices(
-      Matrix4f projection, Matrix4f traversalMvp, Matrix4f drawMvp, Matrix4f vanillaDrawMvp) {}
+      Matrix4f projection,
+      Matrix4f traversalMvp,
+      Matrix4f drawMvp,
+      Matrix4f vanillaDrawMvp,
+      Matrix4f screenProjection,
+      Matrix4f screenDrawMvp) {}
 }
